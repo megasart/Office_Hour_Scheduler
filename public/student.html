@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header>
+      <h1>Student Dashboard</h1>
+      <p>Find an office-hour appointment.</p>
+    </header>
+
+    <main>
+      <a class="back-link" href="/">← Back to Home</a>
+
+      <section class="panel">
+        <h2>Available Office Hours</h2>
+
+        <div class="card">
+          <h3>CS4800 - Dr. Taylor</h3>
+          <p><strong>Time:</strong> Monday, 3:00 PM - 3:30 PM</p>
+          <p><strong>Location:</strong> Building 9, Room 201 or Zoom</p>
+          <a class="button" href="#appointment-form-section">
+            Request Appointment
+          </a>
+        </div>
+
+        <div class="card">
+          <h3>CS4800 - Dr. Taylor</h3>
+          <p><strong>Time:</strong> Wednesday, 1:00 PM - 1:30 PM</p>
+          <p><strong>Location:</strong> Zoom</p>
+          <a class="button" href="#appointment-form-section">
+            Request Appointment
+          </a>
+        </div>
+      </section>
+
+      <section class="panel" id="appointment-form-section">
+        <h2>Request an Appointment</h2>
+
+        <form id="appointment-form">
+          <label for="assignment">Assignment</label>
+          <select id="assignment" required>
+            <option value="">Choose an assignment</option>
+            <option value="Assignment 1">Assignment 1</option>
+            <option value="Assignment 2">Assignment 2</option>
+            <option value="Other">Other</option>
+          </select>
+
+          <label for="problem">What do you need help with?</label>
+          <textarea
+            id="problem"
+            placeholder="Describe your question or problem..."
+            required
+          ></textarea>
+
+          <label for="meeting-type">Meeting Type</label>
+          <select id="meeting-type" required>
+            <option value="">Choose a meeting type</option>
+            <option value="In-person">In-person</option>
+            <option value="Zoom">Zoom</option>
+          </select>
+
+          <button type="submit">Submit Appointment Request</button>
+        </form>
+
+        <p id="form-message"></p>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
