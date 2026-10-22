@@ -1,8 +1,34 @@
+require("dotenv").config();
+
 const express = require("express");
 const path = require("path");
-const database = require("./db");
+const session = require("express-session");
+const pgSession = require("connect-pg-simple")(session);
+const pool = require("./db");
 
 const app = express();
+if (!process.env.SESSION_SECRET) {
+  throw new Error("SESSION_SECRET is missing from the .env file.");
+}
+
+app.use(
+  session({
+    store: new pgSession({
+      pool,
+      tableName: "user_sessions",
+      createTableIfMissing: true
+    }),
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 1000 * 60 * 60 * 4
+    }
+  })
+);
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
@@ -10,7 +36,7 @@ app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/api/health", async (request, response) => {
   try {
-    const result = await database.query(
+    const result = await pool.query(
       "SELECT NOW() AS current_time"
     );
 
