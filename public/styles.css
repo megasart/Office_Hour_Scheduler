@@ -190,3 +190,30 @@ dialog::backdrop {
   font-size: 1rem;
   font-weight: normal;
 }
+
+.appointment-card {
+  margin-top: 20px;
+}
+
+.appointment-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.appointment-actions button {
+  margin: 0;
+}
+
+.decline-button {
+  background-color: #dc2626;
+}
+
+.decline-button:hover {
+  background-color: #b91c1c;
+}
+
+#teacher-message {
+  color: #15803d;
+  font-weight: bold;
+}

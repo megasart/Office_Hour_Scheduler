@@ -102,6 +102,103 @@ app.post("/api/appointments", async (request, response) => {
   }
 });
 
+app.get("/api/appointments", async (request, response) => {
+  const requestedStatus = request.query.status;
+  const validStatuses = ["Pending", "Approved", "Declined"];
+
+  if (
+    requestedStatus &&
+    !validStatuses.includes(requestedStatus)
+  ) {
+    return response.status(400).json({
+      message: "Invalid appointment status."
+    });
+  }
+
+  const queryValues = [];
+  let query = `
+    SELECT
+      appointments.id,
+      appointments.assignment,
+      appointments.problem_description,
+      appointments.meeting_type,
+      appointments.status,
+      appointments.created_at,
+      office_hours.course_name,
+      office_hours.instructor_name,
+      office_hours.day_of_week,
+      office_hours.start_time,
+      office_hours.end_time,
+      office_hours.location
+    FROM appointments
+    JOIN office_hours
+      ON appointments.office_hour_id = office_hours.id
+  `;
+
+  if (requestedStatus) {
+    query += " WHERE appointments.status = $1";
+    queryValues.push(requestedStatus);
+  }
+
+  query += " ORDER BY appointments.created_at DESC";
+
+  try {
+    const result = await database.query(query, queryValues);
+
+    response.json(result.rows);
+  } catch (error) {
+    console.error("Could not load appointments:", error.message);
+
+    response.status(500).json({
+      message: "Appointments could not be loaded."
+    });
+  }
+});
+
+app.patch("/api/appointments/:id/status", async (request, response) => {
+  const appointmentId = Number(request.params.id);
+  const { status } = request.body;
+  const validStatuses = ["Approved", "Declined"];
+
+  if (
+    !Number.isInteger(appointmentId) ||
+    !validStatuses.includes(status)
+  ) {
+    return response.status(400).json({
+      message: "Invalid appointment ID or status."
+    });
+  }
+
+  try {
+    const result = await database.query(
+      `
+        UPDATE appointments
+        SET status = $1
+        WHERE id = $2
+        RETURNING id, status
+      `,
+      [status, appointmentId]
+    );
+
+    if (result.rowCount === 0) {
+      return response.status(404).json({
+        message: "Appointment not found."
+      });
+    }
+
+    response.json({
+      message: `Appointment request ${status.toLowerCase()}.`,
+      appointment: result.rows[0]
+    });
+  } catch (error) {
+    console.error("Could not update appointment:", error.message);
+
+    response.status(500).json({
+      message: "Appointment status could not be updated."
+    });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
