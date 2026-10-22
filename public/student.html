@@ -6,6 +6,7 @@
     <title>Student Dashboard</title>
     <link rel="stylesheet" href="styles.css">
   </head>
+
   <body>
     <header>
       <h1>Student Dashboard</h1>
@@ -19,28 +20,64 @@
         <h2>Available Office Hours</h2>
 
         <div class="card">
-          <h3>CS4800 - Dr. Taylor</h3>
-          <p><strong>Time:</strong> Monday, 3:00 PM - 3:30 PM</p>
-          <p><strong>Location:</strong> Building 9, Room 201 or Zoom</p>
-          <a class="button" href="#appointment-form-section">
+          <h3>CS4800 with Dr. Taylor</h3>
+          <p>Monday, 3:00 PM - 3:30 PM</p>
+          <p>Building 9, Room 201 / Zoom</p>
+
+          <a
+            class="button request-button"
+            href="#"
+            data-office-hour-id="1"
+            data-office-hour-title="CS4800 with Dr. Taylor"
+            data-office-hour-time="Monday, 3:00 PM - 3:30 PM"
+            data-office-hour-location="Building 9, Room 201 / Zoom"
+          >
             Request Appointment
           </a>
         </div>
 
         <div class="card">
-          <h3>CS4800 - Dr. Taylor</h3>
-          <p><strong>Time:</strong> Wednesday, 1:00 PM - 1:30 PM</p>
-          <p><strong>Location:</strong> Zoom</p>
-          <a class="button" href="#appointment-form-section">
+          <h3>CS4800 with Dr. Taylor</h3>
+          <p>Wednesday, 1:00 PM - 1:30 PM</p>
+          <p>Zoom</p>
+
+          <a
+            class="button request-button"
+            href="#"
+            data-office-hour-id="2"
+            data-office-hour-title="CS4800 with Dr. Taylor"
+            data-office-hour-time="Wednesday, 1:00 PM - 1:30 PM"
+            data-office-hour-location="Zoom"
+          >
             Request Appointment
           </a>
         </div>
       </section>
+    </main>
 
-      <section class="panel" id="appointment-form-section">
-        <h2>Request an Appointment</h2>
+    <dialog id="appointment-dialog">
+      <div class="dialog-content">
+        <div class="dialog-header">
+          <h2>Request an Appointment</h2>
+
+          <button
+            class="dialog-close"
+            type="button"
+            aria-label="Close appointment form"
+          >
+            ×
+          </button>
+        </div>
+
+        <div id="selected-office-hour" class="selected-office-hour">
+          <strong id="selected-course-teacher"></strong>
+          <span id="selected-time" class="selected-office-detail"></span>
+          <span id="selected-location" class="selected-office-detail"></span>
+        </div>
 
         <form id="appointment-form">
+          <input type="hidden" id="office-hour-id">
+
           <label for="assignment">Assignment</label>
           <select id="assignment" required>
             <option value="">Choose an assignment</option>
@@ -66,9 +103,9 @@
           <button type="submit">Submit Appointment Request</button>
         </form>
 
-        <p id="form-message"></p>
-      </section>
-    </main>
+        <p id="form-message" aria-live="polite"></p>
+      </div>
+    </dialog>
 
     <script src="app.js"></script>
   </body>
