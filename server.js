@@ -8,9 +8,13 @@ const bcrypt = require("bcryptjs");
 const pool = require("./db");
 
 const app = express();
+const PORT = process.env.PORT || 3000;
+
 if (!process.env.SESSION_SECRET) {
   throw new Error("SESSION_SECRET is missing from the .env file.");
 }
+
+app.use(express.json());
 
 app.use(
   session({
@@ -30,7 +34,8 @@ app.use(
     }
   })
 );
-const PORT = process.env.PORT || 3000;
+
+app.use(express.static(path.join(__dirname, "public")));
 
 app.post("/api/login", async (req, res) => {
   const { username, password } = req.body;
@@ -44,15 +49,15 @@ app.post("/api/login", async (req, res) => {
   try {
     const result = await pool.query(
       `
-        select
+        SELECT
           id,
           username,
           password_hash,
           role,
           display_name,
           teacher_slug
-        from app_users
-        where username = $1
+        FROM app_users
+        WHERE username = $1
       `,
       [username.trim().toLowerCase()]
     );
@@ -127,9 +132,6 @@ app.post("/api/logout", (req, res) => {
   });
 });
 
-app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
-
 app.get("/api/health", async (request, response) => {
   try {
     const result = await pool.query(
@@ -176,7 +178,7 @@ app.post("/api/appointments", async (request, response) => {
   }
 
   try {
-    const officeHour = await database.query(
+    const officeHour = await pool.query(
       `
         SELECT id
         FROM office_hours
@@ -192,7 +194,7 @@ app.post("/api/appointments", async (request, response) => {
       });
     }
 
-    const result = await database.query(
+    const result = await pool.query(
       `
         INSERT INTO appointments (
           office_hour_id,
@@ -265,7 +267,7 @@ app.get("/api/appointments", async (request, response) => {
   query += " ORDER BY appointments.created_at DESC";
 
   try {
-    const result = await database.query(query, queryValues);
+    const result = await pool.query(query, queryValues);
 
     response.json(result.rows);
   } catch (error) {
@@ -292,7 +294,7 @@ app.patch("/api/appointments/:id/status", async (request, response) => {
   }
 
   try {
-    const result = await database.query(
+    const result = await pool.query(
       `
         UPDATE appointments
         SET status = $1
