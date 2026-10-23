@@ -217,3 +217,47 @@ dialog::backdrop {
   color: #15803d;
   font-weight: bold;
 }
+
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background-color: #f3f6fa;
+}
+
+.login-card {
+  width: min(100%, 420px);
+  padding: 32px;
+  border-radius: 12px;
+  background-color: white;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+}
+
+.login-card h1,
+.login-card h2 {
+  text-align: center;
+}
+
+.login-card form {
+  display: grid;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.login-card input {
+  padding: 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+.login-card button {
+  margin-top: 12px;
+}
+
+#login-message {
+  min-height: 24px;
+  color: #b91c1c;
+  text-align: center;
+}
