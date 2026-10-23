@@ -4,6 +4,7 @@ const express = require("express");
 const path = require("path");
 const session = require("express-session");
 const pgSession = require("connect-pg-simple")(session);
+const bcrypt = require("bcryptjs");
 const pool = require("./db");
 
 const app = express();
@@ -30,6 +31,101 @@ app.use(
   })
 );
 const PORT = process.env.PORT || 3000;
+
+app.post("/api/login", async (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({
+      error: "Username and password are required."
+    });
+  }
+
+  try {
+    const result = await pool.query(
+      `
+        select
+          id,
+          username,
+          password_hash,
+          role,
+          display_name,
+          teacher_slug
+        from app_users
+        where username = $1
+      `,
+      [username.trim().toLowerCase()]
+    );
+
+    const user = result.rows[0];
+
+    if (!user) {
+      return res.status(401).json({
+        error: "Invalid username or password."
+      });
+    }
+
+    const passwordMatches = await bcrypt.compare(
+      password,
+      user.password_hash
+    );
+
+    if (!passwordMatches) {
+      return res.status(401).json({
+        error: "Invalid username or password."
+      });
+    }
+
+    req.session.user = {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      displayName: user.display_name,
+      teacherSlug: user.teacher_slug
+    };
+
+    res.json({
+      message: "Login successful.",
+      user: req.session.user
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+
+    res.status(500).json({
+      error: "Login failed."
+    });
+  }
+});
+
+app.get("/api/me", (req, res) => {
+  if (!req.session.user) {
+    return res.status(401).json({
+      error: "You are not logged in."
+    });
+  }
+
+  res.json({
+    user: req.session.user
+  });
+});
+
+app.post("/api/logout", (req, res) => {
+  req.session.destroy((error) => {
+    if (error) {
+      console.error("Logout error:", error);
+
+      return res.status(500).json({
+        error: "Logout failed."
+      });
+    }
+
+    res.clearCookie("connect.sid");
+
+    res.json({
+      message: "Logout successful."
+    });
+  });
+});
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
