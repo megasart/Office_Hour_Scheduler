@@ -37,6 +37,34 @@ app.use(
 
 app.use(express.static(path.join(__dirname, "public")));
 
+function requireLogin(request, response, next) {
+  if (!request.session.user) {
+    return response.status(401).json({
+      error: "You must be logged in."
+    });
+  }
+
+  next();
+}
+
+function requireRole(role) {
+  return (request, response, next) => {
+    if (!request.session.user) {
+      return response.status(401).json({
+        error: "You must be logged in."
+      });
+    }
+
+    if (request.session.user.role !== role) {
+      return response.status(403).json({
+        error: "You do not have permission to perform this action."
+      });
+    }
+
+    next();
+  };
+}
+
 app.post("/api/login", async (req, res) => {
   const { username, password } = req.body;
 
@@ -153,7 +181,10 @@ app.get("/api/health", async (request, response) => {
   }
 });
 
-app.post("/api/appointments", async (request, response) => {
+app.post(
+  "/api/appointments",
+  requireRole("student"),
+  async (request, response) => {
   const {
     officeHourId,
     assignment,
@@ -226,7 +257,10 @@ app.post("/api/appointments", async (request, response) => {
   }
 });
 
-app.get("/api/appointments", async (request, response) => {
+app.get(
+  "/api/appointments",
+  requireRole("teacher"),
+  async (request, response) => {
   const requestedStatus = request.query.status;
   const validStatuses = ["Pending", "Approved", "Declined"];
 
@@ -279,7 +313,10 @@ app.get("/api/appointments", async (request, response) => {
   }
 });
 
-app.patch("/api/appointments/:id/status", async (request, response) => {
+app.patch(
+  "/api/appointments/:id/status",
+  requireRole("teacher"),
+  async (request, response) => {
   const appointmentId = Number(request.params.id);
   const { status } = request.body;
   const validStatuses = ["Approved", "Declined"];
