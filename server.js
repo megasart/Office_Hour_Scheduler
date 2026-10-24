@@ -37,6 +37,73 @@ app.use(
 
 app.use(express.static(path.join(__dirname, "public")));
 
+app.get("/teacher/:slug", (request, response) => {
+  response.sendFile(
+    path.join(__dirname, "public", "teacher-profile.html")
+  );
+});
+
+app.get("/api/teachers/:slug", async (request, response) => {
+  const { slug } = request.params;
+
+  try {
+    const teacherResult = await pool.query(
+      `
+        SELECT
+          id,
+          display_name,
+          teacher_slug
+        FROM app_users
+        WHERE teacher_slug = $1
+          AND role = 'teacher'
+      `,
+      [slug]
+    );
+
+    if (teacherResult.rowCount === 0) {
+      return response.status(404).json({
+        error: "Teacher profile not found."
+      });
+    }
+
+    const teacher = teacherResult.rows[0];
+
+    const officeHourResult = await pool.query(
+      `
+        SELECT
+          id,
+          course_name,
+          instructor_name,
+          day_of_week,
+          start_time,
+          end_time,
+          location,
+          meeting_mode,
+          is_available
+        FROM office_hours
+        WHERE teacher_id = $1
+          AND is_available = true
+        ORDER BY id
+      `,
+      [teacher.id]
+    );
+
+    response.json({
+      teacher,
+      officeHours: officeHourResult.rows
+    });
+  } catch (error) {
+    console.error(
+      "Could not load teacher profile:",
+      error.message
+    );
+
+    response.status(500).json({
+      error: "Teacher profile could not be loaded."
+    });
+  }
+});
+
 function requireRole(role) {
   return (request, response, next) => {
     if (!request.session.user) {

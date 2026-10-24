@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Teacher Profile - Office Hour Scheduler</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+
+  <body class="teacher-profile-page">
+    <header class="profile-header">
+      <a href="/" class="profile-brand">
+        Office Hour Scheduler
+      </a>
+
+      <a href="/login.html" class="profile-login-link">
+        Log In
+      </a>
+    </header>
+
+    <main class="profile-container">
+      <a href="/" class="back-link">← Back to Home</a>
+
+      <section class="profile-intro">
+        <p class="dashboard-label">Teacher Profile</p>
+        <h1 id="teacher-name">Loading...</h1>
+        <p>
+          View available office hours and request an appointment.
+        </p>
+      </section>
+
+      <section class="profile-section">
+        <h2>Available Office Hours</h2>
+
+        <p id="profile-message" class="student-message"></p>
+
+        <div id="profile-office-hours">
+          <p>Loading office hours...</p>
+        </div>
+      </section>
+    </main>
+
+    <script src="/teacher-profile.js"></script>
+  </body>
+</html>
