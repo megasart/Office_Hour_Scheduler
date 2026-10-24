@@ -6,12 +6,71 @@ const session = require("express-session");
 const pgSession = require("connect-pg-simple")(session);
 const bcrypt = require("bcryptjs");
 const pool = require("./db");
+const { GoogleGenAI } = require("@google/genai");
+
+const gemini = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY
+});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+async function analyzeAppointment(assignment, problemDescription) {
+  const response = await gemini.models.generateContent({
+    model:
+      process.env.GEMINI_MODEL ||
+      "gemini-3.1-flash-lite",
 
-if (!process.env.SESSION_SECRET) {
-  throw new Error("SESSION_SECRET is missing from the .env file.");
+    contents: `
+You are an office-hour preparation assistant for a university.
+
+Analyze the student's appointment request.
+Do not complete or solve the student's assignment.
+
+Return:
+1. A short summary of the student's problem.
+2. The likely topic.
+3. Three questions the student could discuss with the teacher.
+
+Assignment:
+${assignment}
+
+Problem description:
+${problemDescription}
+`,
+
+    config: {
+      responseMimeType: "application/json",
+
+      responseJsonSchema: {
+        type: "object",
+        properties: {
+          summary: {
+            type: "string"
+          },
+          topic: {
+            type: "string"
+          },
+          suggestedQuestions: {
+            type: "array",
+            items: {
+              type: "string"
+            }
+          }
+        },
+        required: [
+          "summary",
+          "topic",
+          "suggestedQuestions"
+        ]
+      }
+    }
+  });
+
+  if (!response.text) {
+    throw new Error("Gemini returned no analysis.");
+  }
+
+  return JSON.parse(response.text);
 }
 
 app.use(express.json());
@@ -452,6 +511,29 @@ app.post(
         });
       }
 
+      let aiAnalysis = {
+        summary: null,
+        topic: null,
+        suggestedQuestions: []
+      };
+
+      try {
+        aiAnalysis = await analyzeAppointment(
+          assignment.trim(),
+          problemDescription.trim()
+        );
+      } catch (aiError) {
+        console.error("AI analysis failed:", aiError.message);
+      }
+
+      const aiSuggestedQuestions = Array.isArray(
+        aiAnalysis.suggestedQuestions
+      )
+        ? aiAnalysis.suggestedQuestions
+            .map((question, index) => `${index + 1}. ${question}`)
+            .join("\n")
+        : null;
+
       const result = await pool.query(
         `
           INSERT INTO appointments (
@@ -459,17 +541,29 @@ app.post(
             student_id,
             assignment,
             problem_description,
-            meeting_type
+            meeting_type,
+            ai_summary,
+            ai_topic,
+            ai_suggested_questions
           )
-          VALUES ($1, $2, $3, $4, $5)
-          RETURNING id, student_id, status, created_at
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          RETURNING
+            id,
+            status,
+            created_at,
+            ai_summary,
+            ai_topic,
+            ai_suggested_questions
         `,
         [
           numericOfficeHourId,
           request.session.user.id,
           assignment.trim(),
           problemDescription.trim(),
-          meetingType
+          meetingType,
+          aiAnalysis.summary,
+          aiAnalysis.topic,
+          aiSuggestedQuestions
         ]
       );
 
@@ -551,7 +645,7 @@ app.get(
       });
     }
 
-    const queryValues = [request.session.user.id];
+    const queryValues = [];
 
     let query = `
       SELECT
@@ -561,6 +655,9 @@ app.get(
         appointments.meeting_type,
         appointments.status,
         appointments.created_at,
+        appointments.ai_summary,
+        appointments.ai_topic,
+        appointments.ai_suggested_questions,
         office_hours.course_name,
         office_hours.instructor_name,
         office_hours.day_of_week,
@@ -570,18 +667,20 @@ app.get(
       FROM appointments
       JOIN office_hours
         ON appointments.office_hour_id = office_hours.id
-      WHERE office_hours.teacher_id = $1
     `;
 
     if (requestedStatus) {
-      query += " AND appointments.status = $2";
+      query += " WHERE appointments.status = $1";
       queryValues.push(requestedStatus);
     }
 
     query += " ORDER BY appointments.created_at DESC";
 
     try {
-      const result = await pool.query(query, queryValues);
+      const result = await pool.query(
+        query,
+        queryValues
+      );
 
       response.json(result.rows);
     } catch (error) {

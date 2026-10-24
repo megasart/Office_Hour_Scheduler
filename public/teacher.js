@@ -117,6 +117,66 @@ async function loadOfficeHours() {
   });
 }
 
+function createAiAnalysisSection(appointment) {
+  const aiSection = document.createElement("section");
+  aiSection.className = "ai-analysis";
+
+  const aiHeading = document.createElement("h4");
+  aiHeading.textContent = "AI Meeting Preparation";
+
+  const summary = document.createElement("p");
+  summary.textContent = appointment.ai_summary
+    ? `Summary: ${appointment.ai_summary}`
+    : "Summary: Not available.";
+
+  const topic = document.createElement("p");
+  topic.textContent = appointment.ai_topic
+    ? `Topic: ${appointment.ai_topic}`
+    : "Topic: Not available.";
+
+  const questionsHeading = document.createElement("p");
+  questionsHeading.textContent = "Suggested questions:";
+
+  const questionList = document.createElement("ul");
+
+  const suggestedQuestions =
+    typeof appointment.ai_suggested_questions === "string"
+      ? appointment.ai_suggested_questions
+          .split("\n")
+          .map((question) =>
+            question.replace(/^\d+\.\s*/, "").trim()
+          )
+          .filter(Boolean)
+      : [];
+
+  if (suggestedQuestions.length === 0) {
+    const noQuestions = document.createElement("li");
+    noQuestions.textContent = "No suggested questions available.";
+    questionList.appendChild(noQuestions);
+  } else {
+    suggestedQuestions.forEach((question) => {
+      const listItem = document.createElement("li");
+      listItem.textContent = question;
+      questionList.appendChild(listItem);
+    });
+  }
+
+  const note = document.createElement("small");
+  note.textContent =
+    "AI-generated information should be reviewed before the meeting.";
+
+  aiSection.append(
+    aiHeading,
+    summary,
+    topic,
+    questionsHeading,
+    questionList,
+    note
+  );
+
+  return aiSection;
+}
+
 async function loadAppointments() {
   const response = await fetch(
     "/api/appointments?status=Pending"
@@ -160,6 +220,9 @@ async function loadAppointments() {
     meetingType.textContent =
       `Meeting type: ${appointment.meeting_type}`;
 
+    const aiAnalysisSection =
+      createAiAnalysisSection(appointment);
+
     const actions = document.createElement("div");
     actions.className = "appointment-actions";
 
@@ -181,12 +244,14 @@ async function loadAppointments() {
     });
 
     actions.append(approveButton, declineButton);
+
     card.append(
       title,
       schedule,
       assignment,
       problem,
       meetingType,
+      aiAnalysisSection,
       actions
     );
 
