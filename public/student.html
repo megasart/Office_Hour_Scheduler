@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
     <title>Student Dashboard - Office Hour Scheduler</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -16,7 +19,11 @@
       <div class="student-header-actions">
         <span id="student-welcome"></span>
 
-        <button id="logout-button" class="logout-button" type="button">
+        <button
+          id="logout-button"
+          class="logout-button"
+          type="button"
+        >
           Log Out
         </button>
       </div>
@@ -24,17 +31,25 @@
 
     <main class="student-container">
       <section class="student-intro">
-        <p class="dashboard-label">Student Portal</p>
+        <p class="dashboard-label">
+          Student Portal
+        </p>
+
         <h1>Find an Office Hour</h1>
+
         <p>
-          Choose an available time and submit an appointment request.
+          Choose an available time and submit an
+          appointment request.
         </p>
       </section>
 
       <section class="student-section">
         <h2>Available Office Hours</h2>
 
-        <p id="office-hour-message" class="student-message"></p>
+        <p
+          id="office-hour-message"
+          class="student-message"
+        ></p>
 
         <div id="office-hour-list">
           <p>Loading office hours...</p>
@@ -54,7 +69,10 @@
           </button>
         </div>
 
-        <p id="appointment-status-message" class="student-message"></p>
+        <p
+          id="appointment-status-message"
+          class="student-message"
+        ></p>
 
         <div id="my-appointments-list">
           <p>Loading appointments...</p>
@@ -62,7 +80,10 @@
       </section>
     </main>
 
-    <dialog id="appointment-dialog" class="appointment-dialog">
+    <dialog
+      id="appointment-dialog"
+      class="appointment-dialog"
+    >
       <div class="dialog-heading">
         <h2>Request an Appointment</h2>
 
@@ -75,16 +96,33 @@
         </button>
       </div>
 
-      <div id="selected-office-hour" class="selected-office-hour">
+      <div
+        id="selected-office-hour"
+        class="selected-office-hour"
+      >
         <strong id="selected-course-teacher"></strong>
-        <span id="selected-time" class="selected-office-detail"></span>
-        <span id="selected-location" class="selected-office-detail"></span>
+
+        <span
+          id="selected-time"
+          class="selected-office-detail"
+        ></span>
+
+        <span
+          id="selected-location"
+          class="selected-office-detail"
+        ></span>
       </div>
 
       <form id="appointment-form">
-        <input id="office-hour-id" type="hidden" />
+        <input
+          id="office-hour-id"
+          type="hidden"
+        />
 
-        <label for="assignment">Assignment</label>
+        <label for="assignment">
+          Assignment
+        </label>
+
         <input
           id="assignment"
           type="text"
@@ -95,6 +133,7 @@
         <label for="problem-description">
           What do you need help with?
         </label>
+
         <textarea
           id="problem-description"
           rows="5"
@@ -102,14 +141,83 @@
           required
         ></textarea>
 
-        <label for="meeting-type">Meeting Type</label>
+        <div class="ai-question-tools">
+          <button
+            id="improve-question-button"
+            class="ai-improve-button"
+            type="button"
+          >
+            Improve My Question with AI
+          </button>
+
+          <p
+            id="ai-question-message"
+            class="student-message"
+            aria-live="polite"
+          ></p>
+
+          <div
+            id="question-improvement"
+            class="question-improvement"
+            hidden
+          >
+            <h3>Suggested Better Question</h3>
+
+            <p
+              id="improved-question-text"
+              class="improved-question-text"
+            ></p>
+
+            <p
+              id="improvement-reason"
+              class="improvement-reason"
+            ></p>
+
+            <p>
+              Would you like to use this improved
+              version?
+            </p>
+
+            <div class="ai-question-actions">
+              <button
+                id="use-improved-question"
+                type="button"
+              >
+                Use Improved Question
+              </button>
+
+              <button
+                id="keep-original-question"
+                class="ai-keep-button"
+                type="button"
+              >
+                Keep Original
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <label for="meeting-type">
+          Meeting Type
+        </label>
+
         <select id="meeting-type" required>
-          <option value="">Select a meeting type</option>
-          <option value="In-person">In-person</option>
-          <option value="Zoom">Zoom</option>
+          <option value="">
+            Select a meeting type
+          </option>
+
+          <option value="In-person">
+            In-person
+          </option>
+
+          <option value="Zoom">
+            Zoom
+          </option>
         </select>
 
-        <button type="submit">Submit Appointment Request</button>
+        <button type="submit">
+          Submit Appointment Request
+        </button>
 
         <p id="form-message"></p>
       </form>

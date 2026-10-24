@@ -46,17 +46,60 @@ const formMessage = document.getElementById(
   "form-message"
 );
 
-const closeAppointmentDialogButton = document.getElementById(
-  "close-appointment-dialog"
-);
+const closeAppointmentDialogButton =
+  document.getElementById(
+    "close-appointment-dialog"
+  );
 
-const refreshAppointmentsButton = document.getElementById(
-  "refresh-my-appointments"
-);
+const refreshAppointmentsButton =
+  document.getElementById(
+    "refresh-my-appointments"
+  );
 
 const logoutButton = document.getElementById(
   "logout-button"
 );
+
+const assignmentInput = document.getElementById(
+  "assignment"
+);
+
+const problemDescriptionInput =
+  document.getElementById("problem-description");
+
+const improveQuestionButton =
+  document.getElementById(
+    "improve-question-button"
+  );
+
+const aiQuestionMessage = document.getElementById(
+  "ai-question-message"
+);
+
+const questionImprovement =
+  document.getElementById(
+    "question-improvement"
+  );
+
+const improvedQuestionText =
+  document.getElementById(
+    "improved-question-text"
+  );
+
+const improvementReason =
+  document.getElementById(
+    "improvement-reason"
+  );
+
+const useImprovedQuestionButton =
+  document.getElementById(
+    "use-improved-question"
+  );
+
+const keepOriginalQuestionButton =
+  document.getElementById(
+    "keep-original-question"
+  );
 
 const submitButton = appointmentForm.querySelector(
   'button[type="submit"]'
@@ -113,8 +156,16 @@ async function requireStudent() {
   return data.user;
 }
 
+function resetQuestionImprovement() {
+  questionImprovement.hidden = true;
+  aiQuestionMessage.textContent = "";
+  improvedQuestionText.textContent = "";
+  improvementReason.textContent = "";
+}
+
 function openAppointmentDialog(officeHour) {
   appointmentForm.reset();
+  resetQuestionImprovement();
 
   officeHourIdInput.value = officeHour.id;
 
@@ -147,6 +198,7 @@ async function loadAvailableOfficeHours() {
 
   if (officeHours.length === 0) {
     const emptyMessage = document.createElement("p");
+
     emptyMessage.textContent =
       "There are no available office hours right now.";
 
@@ -159,25 +211,30 @@ async function loadAvailableOfficeHours() {
     card.className = "student-office-hour-card";
 
     const title = document.createElement("h3");
+
     title.textContent =
       `${officeHour.course_name} with ` +
       `${officeHour.instructor_name}`;
 
     const time = document.createElement("p");
+
     time.textContent =
       `${officeHour.day_of_week}, ` +
       `${formatTime(officeHour.start_time)} - ` +
       `${formatTime(officeHour.end_time)}`;
 
     const location = document.createElement("p");
+
     location.textContent =
       `${officeHour.location} / ` +
       `${officeHour.meeting_mode}`;
 
     const actions = document.createElement("div");
-    actions.className = "student-office-hour-actions";
+    actions.className =
+      "student-office-hour-actions";
 
     const teacherLink = document.createElement("a");
+
     teacherLink.href =
       `/teacher/${encodeURIComponent(
         officeHour.teacher_slug
@@ -228,6 +285,7 @@ async function loadMyAppointments() {
 
   if (appointments.length === 0) {
     const emptyMessage = document.createElement("p");
+
     emptyMessage.textContent =
       "You have not submitted any appointments yet.";
 
@@ -237,38 +295,47 @@ async function loadMyAppointments() {
 
   appointments.forEach((appointment) => {
     const card = document.createElement("article");
-    card.className = "student-appointment-card";
+    card.className =
+      "student-appointment-card";
 
     const title = document.createElement("h3");
+
     title.textContent =
       `${appointment.course_name} with ` +
       `${appointment.instructor_name}`;
 
     const schedule = document.createElement("p");
+
     schedule.textContent =
       `${appointment.day_of_week}, ` +
       `${formatTime(appointment.start_time)} - ` +
       `${formatTime(appointment.end_time)}`;
 
     const location = document.createElement("p");
+
     location.textContent =
       `${appointment.location} / ` +
       `${appointment.meeting_mode}`;
 
     const assignment = document.createElement("p");
+
     assignment.textContent =
       `Assignment: ${appointment.assignment}`;
 
     const problem = document.createElement("p");
+
     problem.textContent =
       `Question: ${appointment.problem_description}`;
 
     const meetingType = document.createElement("p");
+
     meetingType.textContent =
       `Meeting type: ${appointment.meeting_type}`;
 
     const status = document.createElement("p");
+
     status.className = "appointment-status";
+
     status.textContent =
       `Status: ${appointment.status}`;
 
@@ -294,22 +361,110 @@ async function loadMyAppointments() {
   });
 }
 
+improveQuestionButton.addEventListener(
+  "click",
+  async () => {
+    const assignment =
+      assignmentInput.value.trim();
+
+    const problemDescription =
+      problemDescriptionInput.value.trim();
+
+    if (!assignment || !problemDescription) {
+      aiQuestionMessage.textContent =
+        "Enter the assignment and your question first.";
+
+      return;
+    }
+
+    improveQuestionButton.disabled = true;
+    questionImprovement.hidden = true;
+
+    aiQuestionMessage.textContent =
+      "Creating a clearer version of your question...";
+
+    try {
+      const response = await fetch(
+        "/api/improve-question",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            assignment,
+            problemDescription
+          })
+        }
+      );
+
+      const data = await getResponseData(response);
+
+      improvedQuestionText.textContent =
+        data.improvedQuestion;
+
+      improvementReason.textContent =
+        `Why this is better: ${data.reason}`;
+
+      questionImprovement.hidden = false;
+
+      aiQuestionMessage.textContent =
+        "Would you like to use the improved version?";
+    } catch (error) {
+      aiQuestionMessage.textContent =
+        error.message;
+    } finally {
+      improveQuestionButton.disabled = false;
+    }
+  }
+);
+
+useImprovedQuestionButton.addEventListener(
+  "click",
+  () => {
+    problemDescriptionInput.value =
+      improvedQuestionText.textContent;
+
+    questionImprovement.hidden = true;
+
+    aiQuestionMessage.textContent =
+      "The improved question was selected. You may edit it before submitting.";
+  }
+);
+
+keepOriginalQuestionButton.addEventListener(
+  "click",
+  () => {
+    questionImprovement.hidden = true;
+
+    aiQuestionMessage.textContent =
+      "Your original question will be used.";
+  }
+);
+
+problemDescriptionInput.addEventListener(
+  "input",
+  () => {
+    questionImprovement.hidden = true;
+    aiQuestionMessage.textContent = "";
+  }
+);
+
 appointmentForm.addEventListener(
   "submit",
   async (event) => {
     event.preventDefault();
 
     submitButton.disabled = true;
-    formMessage.textContent = "Submitting request...";
+
+    formMessage.textContent =
+      "Submitting request...";
 
     const appointmentData = {
       officeHourId: officeHourIdInput.value,
-      assignment: document.getElementById(
-        "assignment"
-      ).value,
-      problemDescription: document.getElementById(
-        "problem-description"
-      ).value,
+      assignment: assignmentInput.value,
+      problemDescription:
+        problemDescriptionInput.value,
       meetingType: document.getElementById(
         "meeting-type"
       ).value
@@ -331,13 +486,15 @@ appointmentForm.addEventListener(
 
       appointmentDialog.close();
       appointmentForm.reset();
+      resetQuestionImprovement();
 
       appointmentStatusMessage.textContent =
         data.message;
 
       await loadMyAppointments();
     } catch (error) {
-      formMessage.textContent = error.message;
+      formMessage.textContent =
+        error.message;
     } finally {
       submitButton.disabled = false;
     }
@@ -347,6 +504,7 @@ appointmentForm.addEventListener(
 closeAppointmentDialogButton.addEventListener(
   "click",
   () => {
+    resetQuestionImprovement();
     appointmentDialog.close();
   }
 );
@@ -396,7 +554,8 @@ async function initializeStudentPage() {
       loadMyAppointments()
     ]);
   } catch (error) {
-    officeHourMessage.textContent = error.message;
+    officeHourMessage.textContent =
+      error.message;
   }
 }
 

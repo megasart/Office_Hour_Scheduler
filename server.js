@@ -21,9 +21,8 @@ async function analyzeAppointment(assignment, problemDescription) {
       "gemini-3.1-flash-lite",
 
     contents: `
-You are an office-hour preparation assistant for a university.
-
-Analyze the student's appointment request.
+Act as an office-hour preparation assistant for a university.
+The student user is going to send a request and you will summarize the student's problem.
 Do not complete or solve the student's assignment.
 
 Return:
@@ -162,6 +161,103 @@ app.get("/api/teachers/:slug", async (request, response) => {
     });
   }
 });
+
+app.post(
+  "/api/improve-question",
+  requireRole("student"),
+  async (request, response) => {
+    const {
+      assignment,
+      problemDescription
+    } = request.body;
+
+    if (
+      typeof assignment !== "string" ||
+      assignment.trim() === "" ||
+      typeof problemDescription !== "string" ||
+      problemDescription.trim() === ""
+    ) {
+      return response.status(400).json({
+        message: "Please enter an assignment and question first."
+      });
+    }
+
+    try {
+      const aiResponse =
+        await gemini.models.generateContent({
+          model:
+            process.env.GEMINI_MODEL ||
+            "gemini-3.1-flash-lite",
+
+          contents: `
+You are a university office-hour question-refinement assistant.
+Whenever a student enters a question, suggest a clearer
+version of the question and explain why it is better.
+
+The improved question should:
+- identify the assignment or topic,
+- describe what the student already tried if provided,
+- identify the exact confusion,
+- clearly state what help the student needs.
+
+Do not invent information.
+Do not solve the assignment.
+Preserve the student's original meaning.
+
+Assignment:
+${assignment.trim()}
+
+Original student question:
+${problemDescription.trim()}
+`,
+
+          config: {
+            responseMimeType: "application/json",
+
+            responseJsonSchema: {
+              type: "object",
+              properties: {
+                improvedQuestion: {
+                  type: "string"
+                },
+                reason: {
+                  type: "string"
+                }
+              },
+              required: [
+                "improvedQuestion",
+                "reason"
+              ]
+            }
+          }
+        });
+
+      if (!aiResponse.text) {
+        throw new Error(
+          "Gemini returned no improved question."
+        );
+      }
+
+      const result = JSON.parse(aiResponse.text);
+
+      response.json({
+        originalQuestion: problemDescription.trim(),
+        improvedQuestion: result.improvedQuestion,
+        reason: result.reason
+      });
+    } catch (error) {
+      console.error(
+        "Question improvement failed:",
+        error.message
+      );
+
+      response.status(500).json({
+        message:
+          "The AI could not improve the question right now."
+      });
+    }
+  }
+);
 
 function requireRole(role) {
   return (request, response, next) => {
