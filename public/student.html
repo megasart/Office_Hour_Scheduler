@@ -1,110 +1,118 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Dashboard</title>
-    <link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Student Dashboard - Office Hour Scheduler</title>
+    <link rel="stylesheet" href="styles.css" />
   </head>
 
-  <body>
-    <header>
-      <h1>Student Dashboard</h1>
-      <p>Find an office-hour appointment.</p>
+  <body class="student-page">
+    <header class="student-header">
+      <a href="/" class="student-brand">
+        Office Hour Scheduler
+      </a>
+
+      <div class="student-header-actions">
+        <span id="student-welcome"></span>
+
+        <button id="logout-button" class="logout-button" type="button">
+          Log Out
+        </button>
+      </div>
     </header>
 
-    <main>
-      <a class="back-link" href="/">← Back to Home</a>
+    <main class="student-container">
+      <section class="student-intro">
+        <p class="dashboard-label">Student Portal</p>
+        <h1>Find an Office Hour</h1>
+        <p>
+          Choose an available time and submit an appointment request.
+        </p>
+      </section>
 
-      <section class="panel">
+      <section class="student-section">
         <h2>Available Office Hours</h2>
 
-        <div class="card">
-          <h3>CS4800 with Dr. Taylor</h3>
-          <p>Monday, 3:00 PM - 3:30 PM</p>
-          <p>Building 9, Room 201 / Zoom</p>
+        <p id="office-hour-message" class="student-message"></p>
 
-          <a
-            class="button request-button"
-            href="#"
-            data-office-hour-id="1"
-            data-office-hour-title="CS4800 with Dr. Taylor"
-            data-office-hour-time="Monday, 3:00 PM - 3:30 PM"
-            data-office-hour-location="Building 9, Room 201 / Zoom"
+        <div id="office-hour-list">
+          <p>Loading office hours...</p>
+        </div>
+      </section>
+
+      <section class="student-section">
+        <div class="section-heading">
+          <h2>My Appointments</h2>
+
+          <button
+            id="refresh-my-appointments"
+            class="small-button"
+            type="button"
           >
-            Request Appointment
-          </a>
+            Refresh
+          </button>
         </div>
 
-        <div class="card">
-          <h3>CS4800 with Dr. Taylor</h3>
-          <p>Wednesday, 1:00 PM - 1:30 PM</p>
-          <p>Zoom</p>
+        <p id="appointment-status-message" class="student-message"></p>
 
-          <a
-            class="button request-button"
-            href="#"
-            data-office-hour-id="2"
-            data-office-hour-title="CS4800 with Dr. Taylor"
-            data-office-hour-time="Wednesday, 1:00 PM - 1:30 PM"
-            data-office-hour-location="Zoom"
-          >
-            Request Appointment
-          </a>
+        <div id="my-appointments-list">
+          <p>Loading appointments...</p>
         </div>
       </section>
     </main>
 
-    <dialog id="appointment-dialog">
-      <div class="dialog-content">
-        <div class="dialog-header">
-          <h2>Request an Appointment</h2>
+    <dialog id="appointment-dialog" class="appointment-dialog">
+      <div class="dialog-heading">
+        <h2>Request an Appointment</h2>
 
-          <button
-            class="dialog-close"
-            type="button"
-            aria-label="Close appointment form"
-          >
-            ×
-          </button>
-        </div>
-
-        <div id="selected-office-hour" class="selected-office-hour">
-          <strong id="selected-course-teacher"></strong>
-          <span id="selected-time" class="selected-office-detail"></span>
-          <span id="selected-location" class="selected-office-detail"></span>
-        </div>
-
-        <form id="appointment-form">
-          <input type="hidden" id="office-hour-id">
-
-          <label for="assignment">Assignment</label>
-          <select id="assignment" required>
-            <option value="">Choose an assignment</option>
-            <option value="Assignment 1">Assignment 1</option>
-            <option value="Assignment 2">Assignment 2</option>
-            <option value="Other">Other</option>
-          </select>
-
-          <label for="problem">What do you need help with?</label>
-          <textarea
-            id="problem"
-            placeholder="Describe your question or problem..."
-            required
-          ></textarea>
-
-          <label for="meeting-type">Meeting Type</label>
-          <select id="meeting-type" required>
-            <option value="">Choose a meeting type</option>
-            <option value="In-person">In-person</option>
-            <option value="Zoom">Zoom</option>
-          </select>
-
-          <button type="submit">Submit Appointment Request</button>
-        </form>
-
-        <p id="form-message" aria-live="polite"></p>
+        <button
+          id="close-appointment-dialog"
+          class="close-dialog-button"
+          type="button"
+        >
+          ×
+        </button>
       </div>
+
+      <div id="selected-office-hour" class="selected-office-hour">
+        <strong id="selected-course-teacher"></strong>
+        <span id="selected-time" class="selected-office-detail"></span>
+        <span id="selected-location" class="selected-office-detail"></span>
+      </div>
+
+      <form id="appointment-form">
+        <input id="office-hour-id" type="hidden" />
+
+        <label for="assignment">Assignment</label>
+        <input
+          id="assignment"
+          type="text"
+          placeholder="Example: Homework 3"
+          required
+        />
+
+        <label for="problem-description">
+          What do you need help with?
+        </label>
+        <textarea
+          id="problem-description"
+          rows="5"
+          placeholder="Describe the question or problem you are having."
+          required
+        ></textarea>
+
+        <label for="meeting-type">Meeting Type</label>
+        <select id="meeting-type" required>
+          <option value="">Select a meeting type</option>
+          <option value="In-person">In-person</option>
+          <option value="Zoom">Zoom</option>
+        </select>
+
+        <button type="submit">Submit Appointment Request</button>
+
+        <p id="form-message"></p>
+      </form>
     </dialog>
 
     <script src="app.js"></script>
