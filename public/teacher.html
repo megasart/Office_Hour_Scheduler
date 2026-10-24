@@ -1,38 +1,122 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teacher Dashboard</title>
-    <link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Teacher Dashboard - Office Hour Scheduler</title>
+    <link rel="stylesheet" href="styles.css" />
   </head>
 
-  <body>
-    <header>
-      <h1>Teacher Dashboard</h1>
-      <p>Manage office hours and student requests.</p>
+  <body class="dashboard-page">
+    <header class="dashboard-header">
+      <a href="/" class="dashboard-brand">
+        Office Hour Scheduler
+      </a>
+
+      <button id="logout-button" class="logout-button" type="button">
+        Log Out
+      </button>
     </header>
 
-    <main>
-      <a class="back-link" href="/">← Back to Home</a>
-
-      <section class="panel">
-        <h2>Manage Office Hours</h2>
+    <main class="dashboard-container">
+      <section class="dashboard-intro">
+        <p class="dashboard-label">Teacher Dashboard</p>
+        <h1 id="teacher-welcome">Welcome</h1>
         <p>
-          Adding new office-hour times will be added in a future version.
+          Manage your office hours and student appointment requests.
         </p>
+
+        <button id="open-office-hour-dialog" type="button">
+          Create Office Hour
+        </button>
       </section>
 
-      <section class="panel">
-        <h2>Pending Appointment Requests</h2>
+      <section class="dashboard-card">
+        <div class="section-heading">
+          <h2>Current Office Hours</h2>
 
-        <p id="teacher-message" aria-live="polite"></p>
+          <button id="refresh-office-hours" class="small-button" type="button">
+            Refresh
+          </button>
+        </div>
+
+        <div id="office-hour-list">
+          <p>Loading office hours...</p>
+        </div>
+      </section>
+
+      <section class="dashboard-card">
+        <div class="section-heading">
+          <h2>Pending Appointment Requests</h2>
+        </div>
+
+        <p id="teacher-message" class="dashboard-message"></p>
 
         <div id="appointment-list">
-          <p>Loading appointment requests...</p>
+          <p>Loading appointments...</p>
         </div>
       </section>
     </main>
+
+    <dialog id="office-hour-dialog" class="office-hour-dialog">
+      <form id="office-hour-form">
+        <div class="dialog-heading">
+          <h2>Create Office Hour</h2>
+
+          <button
+            id="close-office-hour-dialog"
+            class="close-dialog-button"
+            type="button"
+          >
+            ×
+          </button>
+        </div>
+
+        <label for="course-name">Course Name</label>
+        <input
+          id="course-name"
+          type="text"
+          placeholder="CS4800"
+          required
+        />
+
+        <label for="day-of-week">Day</label>
+        <select id="day-of-week" required>
+          <option value="">Select a day</option>
+          <option value="Monday">Monday</option>
+          <option value="Tuesday">Tuesday</option>
+          <option value="Wednesday">Wednesday</option>
+          <option value="Thursday">Thursday</option>
+          <option value="Friday">Friday</option>
+        </select>
+
+        <label for="start-time">Start Time</label>
+        <input id="start-time" type="time" required />
+
+        <label for="end-time">End Time</label>
+        <input id="end-time" type="time" required />
+
+        <label for="location">Location</label>
+        <input
+          id="location"
+          type="text"
+          placeholder="Building 9, Room 201 or Zoom"
+          required
+        />
+
+        <label for="meeting-mode">Meeting Mode</label>
+        <select id="meeting-mode" required>
+          <option value="">Select a meeting mode</option>
+          <option value="In-person">In-person</option>
+          <option value="Zoom">Zoom</option>
+          <option value="Both">In-person and Zoom</option>
+        </select>
+
+        <button type="submit">Create Office Hour</button>
+
+        <p id="office-hour-form-message"></p>
+      </form>
+    </dialog>
 
     <script src="teacher.js"></script>
   </body>
