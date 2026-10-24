@@ -181,6 +181,136 @@ app.get("/api/health", async (request, response) => {
   }
 });
 
+app.get(
+  "/api/office-hours",
+  requireRole("teacher"),
+  async (request, response) => {
+    try {
+      const result = await pool.query(
+        `
+          SELECT
+            id,
+            course_name,
+            instructor_name,
+            day_of_week,
+            start_time,
+            end_time,
+            location,
+            meeting_mode,
+            is_available
+          FROM office_hours
+          WHERE teacher_id = $1
+          ORDER BY id
+        `,
+        [request.session.user.id]
+      );
+
+      response.json(result.rows);
+    } catch (error) {
+      console.error("Could not load office hours:", error.message);
+
+      response.status(500).json({
+        error: "Office hours could not be loaded."
+      });
+    }
+  }
+);
+
+app.post(
+  "/api/office-hours",
+  requireRole("teacher"),
+  async (request, response) => {
+    const {
+      courseName,
+      dayOfWeek,
+      startTime,
+      endTime,
+      location,
+      meetingMode
+    } = request.body;
+
+    const validDays = [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday"
+    ];
+
+    const validMeetingModes = [
+      "In-person",
+      "Zoom",
+      "Both"
+    ];
+
+    if (
+      typeof courseName !== "string" ||
+      courseName.trim() === "" ||
+      !validDays.includes(dayOfWeek) ||
+      typeof startTime !== "string" ||
+      typeof endTime !== "string" ||
+      startTime >= endTime ||
+      typeof location !== "string" ||
+      location.trim() === "" ||
+      !validMeetingModes.includes(meetingMode)
+    ) {
+      return response.status(400).json({
+        error: "Please complete all office-hour fields correctly."
+      });
+    }
+
+    try {
+      const result = await pool.query(
+        `
+          INSERT INTO office_hours (
+            teacher_id,
+            course_name,
+            instructor_name,
+            day_of_week,
+            start_time,
+            end_time,
+            location,
+            meeting_mode,
+            is_available
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
+          RETURNING
+            id,
+            course_name,
+            instructor_name,
+            day_of_week,
+            start_time,
+            end_time,
+            location,
+            meeting_mode,
+            is_available
+        `,
+        [
+          request.session.user.id,
+          courseName.trim(),
+          request.session.user.displayName,
+          dayOfWeek,
+          startTime,
+          endTime,
+          location.trim(),
+          meetingMode
+        ]
+      );
+
+      response.status(201).json({
+        message: "Office hour created successfully.",
+        officeHour: result.rows[0]
+      });
+    } catch (error) {
+      console.error("Could not create office hour:", error.message);
+
+      response.status(500).json({
+        error: "Office hour could not be created."
+      });
+    }
+  }
+);
+
 app.post(
   "/api/appointments",
   requireRole("student"),
