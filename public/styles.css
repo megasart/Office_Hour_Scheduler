@@ -602,3 +602,16 @@ dialog::backdrop {
 .profile-request-link:hover {
   background-color: #1d4ed8;
 }
+
+.student-teacher-link {
+  display: inline-block;
+  margin-top: 10px;
+  margin-right: 12px;
+  color: #2563eb;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.student-teacher-link:hover {
+  text-decoration: underline;
+}
