@@ -615,3 +615,28 @@ dialog::backdrop {
 .student-teacher-link:hover {
   text-decoration: underline;
 }
+
+.student-office-hour-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.student-office-hour-actions button {
+  margin: 0;
+}
+
+.student-teacher-button {
+  display: inline-block;
+  padding: 10px 14px;
+  border-radius: 6px;
+  color: white;
+  background-color: #1e3a5f;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.student-teacher-button:hover {
+  background-color: #162d4a;
+}

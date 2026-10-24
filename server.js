@@ -281,18 +281,21 @@ app.get(
       const result = await pool.query(
         `
           SELECT
-            id,
-            course_name,
-            instructor_name,
-            day_of_week,
-            start_time,
-            end_time,
-            location,
-            meeting_mode,
-            is_available
+            office_hours.id,
+            office_hours.course_name,
+            office_hours.instructor_name,
+            office_hours.day_of_week,
+            office_hours.start_time,
+            office_hours.end_time,
+            office_hours.location,
+            office_hours.meeting_mode,
+            office_hours.is_available,
+            app_users.teacher_slug
           FROM office_hours
-          WHERE is_available = true
-          ORDER BY id
+          JOIN app_users
+            ON office_hours.teacher_id = app_users.id
+          WHERE office_hours.is_available = true
+          ORDER BY office_hours.id
         `
       );
 

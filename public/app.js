@@ -174,22 +174,43 @@ async function loadAvailableOfficeHours() {
       `${officeHour.location} / ` +
       `${officeHour.meeting_mode}`;
 
+    const actions = document.createElement("div");
+    actions.className = "student-office-hour-actions";
+
+    const teacherLink = document.createElement("a");
+    teacherLink.href =
+      `/teacher/${encodeURIComponent(
+        officeHour.teacher_slug
+      )}`;
+
+    teacherLink.className =
+      "student-teacher-button";
+
+    teacherLink.textContent =
+      "View Teacher Profile";
+
     const requestButton = document.createElement(
       "button"
     );
 
     requestButton.type = "button";
-    requestButton.textContent = "Request This Time";
+    requestButton.textContent =
+      "Request This Time";
 
     requestButton.addEventListener("click", () => {
       openAppointmentDialog(officeHour);
     });
 
+    actions.append(
+      teacherLink,
+      requestButton
+    );
+
     card.append(
       title,
       time,
       location,
-      requestButton
+      actions
     );
 
     officeHourList.appendChild(card);
