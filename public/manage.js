@@ -8,6 +8,13 @@ const rescheduleSection = document.getElementById("reschedule-section");
 const rescheduleOfficeHour = document.getElementById("reschedule-office-hour");
 const rescheduleDate = document.getElementById("reschedule-date");
 const submitRescheduleButton = document.getElementById("submit-reschedule");
+const cancelDialog = document.getElementById("cancel-dialog");
+const cancelForm = document.getElementById("cancel-form");
+const cancelReason = document.getElementById("cancel-reason");
+const cancelFormMessage = document.getElementById("cancel-form-message");
+const closeCancelDialogButton = document.getElementById("close-cancel-dialog");
+const keepAppointmentButton = document.getElementById("keep-appointment");
+const submitCancelButton = document.getElementById("submit-cancel");
 
 const token = window.location.pathname.split("/").filter(Boolean).pop();
 let availableOfficeHours = [];
@@ -121,22 +128,42 @@ rescheduleOfficeHour.addEventListener("change", () => {
   }
 });
 
-cancelButton.addEventListener("click", async () => {
-  if (!window.confirm("Cancel this appointment?")) {
-    return;
-  }
-  cancelButton.disabled = true;
+cancelButton.addEventListener("click", () => {
+  cancelReason.value = "";
+  cancelFormMessage.textContent = "";
+  cancelDialog.showModal();
+  cancelReason.focus();
+});
+
+function closeCancelDialog() {
+  cancelFormMessage.textContent = "";
+  cancelDialog.close();
+}
+
+closeCancelDialogButton.addEventListener("click", closeCancelDialog);
+keepAppointmentButton.addEventListener("click", closeCancelDialog);
+
+cancelForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  submitCancelButton.disabled = true;
+  cancelFormMessage.textContent = "Cancelling appointment...";
   try {
     const response = await fetch("/api/manage/" + token + "/cancel", {
-      method: "POST"
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ reason: cancelReason.value.trim() })
     });
     const data = await getResponseData(response);
+    cancelDialog.close();
     manageMessage.textContent = data.message;
     cancelButton.hidden = true;
     rescheduleSection.hidden = true;
   } catch (error) {
-    manageMessage.textContent = error.message;
-    cancelButton.disabled = false;
+    cancelFormMessage.textContent = error.message;
+  } finally {
+    submitCancelButton.disabled = false;
   }
 });
 

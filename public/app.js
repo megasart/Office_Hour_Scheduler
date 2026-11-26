@@ -1,4 +1,12 @@
-const officeHourList = document.getElementById("office-hour-list");
+const teacherFinder = document.getElementById("teacher-finder");
+const teacherFinderForm = document.getElementById("teacher-finder-form");
+const teacherLookupInput = document.getElementById("teacher-lookup");
+const teacherFinderMessage = document.getElementById("teacher-finder-message");
+const teacherResults = document.getElementById("teacher-results");
+const selectedTeacherName = document.getElementById("selected-teacher-name");
+const selectedTeacherInfo = document.getElementById("selected-teacher-info");
+const selectedTeacherDetails = document.getElementById("selected-teacher-details");
+const changeTeacherButton = document.getElementById("change-teacher");
 const availabilityCalendar = document.getElementById("availability-calendar");
 const officeHourMessage = document.getElementById("office-hour-message");
 const bookingStatusMessage = document.getElementById("booking-status-message");
@@ -8,6 +16,7 @@ const officeHourIdInput = document.getElementById("office-hour-id");
 const scheduledDateInput = document.getElementById("scheduled-date");
 const studentNameInput = document.getElementById("student-name");
 const studentEmailInput = document.getElementById("student-email");
+const studentEmailError = document.getElementById("student-email-error");
 const preferredLanguageInput = document.getElementById("preferred-language");
 const websiteInput = document.getElementById("website");
 const selectedCourseTeacher = document.getElementById("selected-course-teacher");
@@ -29,6 +38,9 @@ const keepOriginalQuestionButton = document.getElementById("keep-original-questi
 const submitButton = appointmentForm.querySelector('button[type="submit"]');
 
 let availableOfficeHours = [];
+let selectedTeacherSlug = "";
+let calendarMonth = new Date();
+calendarMonth.setDate(1);
 
 function formatTime(timeValue) {
   if (!timeValue) {
@@ -65,6 +77,89 @@ async function getResponseData(response) {
   }
   return data;
 }
+
+function extractTeacherSlug(value) {
+  const input = value.trim();
+  if (!input) {
+    return "";
+  }
+
+  let path = input;
+  try {
+    if (input.includes("://")) {
+      path = new URL(input).pathname;
+    }
+  } catch (error) {
+    return "";
+  }
+
+  const parts = path.split("/").filter(Boolean);
+  const teacherIndex = parts.indexOf("teacher");
+  const slug = teacherIndex >= 0
+    ? parts[teacherIndex + 1]
+    : parts.length === 1
+      ? parts[0]
+      : "";
+
+  if (!slug || slug.length > 100 || !/^[a-z0-9][a-z0-9._-]*$/i.test(slug)) {
+    return "";
+  }
+  return decodeURIComponent(slug).toLowerCase();
+}
+
+function renderTeacherDetails(profile) {
+  const officeHours = profile.officeHours || [];
+  const courses = Array.from(
+    new Set(officeHours.map((officeHour) => officeHour.course_name))
+  );
+  selectedTeacherInfo.textContent = courses.length > 0
+    ? "Courses: " + courses.join(", ")
+    : "No active office hours are available yet.";
+
+  selectedTeacherDetails.replaceChildren();
+  const detailsByCourse = new Map();
+  officeHours.forEach((officeHour) => {
+    if (!detailsByCourse.has(officeHour.course_name)) {
+      detailsByCourse.set(officeHour.course_name, officeHour);
+    }
+  });
+
+  detailsByCourse.forEach((officeHour) => {
+    const card = document.createElement("article");
+    card.className = "teacher-info-card";
+    const heading = document.createElement("h3");
+    heading.textContent = officeHour.course_name;
+    const location = document.createElement("p");
+    location.textContent =
+      officeHour.location + " / " + officeHour.meeting_mode;
+    const timeZone = document.createElement("p");
+    timeZone.textContent =
+      "Time zone: " + (officeHour.time_zone || "America/Los_Angeles");
+    card.append(heading, location, timeZone);
+    selectedTeacherDetails.appendChild(card);
+  });
+}
+
+function validateStudentEmail() {
+  const value = studentEmailInput.value.trim();
+  const valid = /^\S+@\S+\.\S+$/.test(value);
+  studentEmailInput.classList.toggle("input-error", !valid);
+  studentEmailInput.setAttribute("aria-invalid", String(!valid));
+  studentEmailError.textContent = valid
+    ? ""
+    : "Enter a valid email address, such as you@example.com.";
+  return valid;
+}
+
+studentEmailInput.addEventListener("input", () => {
+  if (studentEmailInput.value.trim() !== "") {
+    validateStudentEmail();
+  } else {
+    studentEmailInput.classList.remove("input-error");
+    studentEmailInput.setAttribute("aria-invalid", "false");
+    studentEmailError.textContent = "";
+  }
+});
 
 function resetQuestionImprovement() {
   questionImprovement.hidden = true;
@@ -129,94 +224,109 @@ function readParticipants() {
 
 function renderAvailabilityCalendar(officeHours) {
   availabilityCalendar.replaceChildren();
-  const title = document.createElement("div");
-  title.className = "calendar-title";
-  title.textContent = "Upcoming availability";
-  availabilityCalendar.appendChild(title);
+
+  const toolbar = document.createElement("div");
+  toolbar.className = "calendar-toolbar";
+  const previousButton = document.createElement("button");
+  previousButton.type = "button";
+  previousButton.className = "calendar-nav-button";
+  previousButton.textContent = "‹";
+  previousButton.setAttribute("aria-label", "Previous month");
+  previousButton.addEventListener("click", () => {
+    calendarMonth.setMonth(calendarMonth.getMonth() - 1);
+    renderAvailabilityCalendar(officeHours);
+  });
+  const monthLabel = document.createElement("h2");
+  monthLabel.className = "calendar-month-label";
+  monthLabel.textContent = calendarMonth.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric"
+  });
+  const nextButton = document.createElement("button");
+  nextButton.type = "button";
+  nextButton.className = "calendar-nav-button";
+  nextButton.textContent = "›";
+  nextButton.setAttribute("aria-label", "Next month");
+  nextButton.addEventListener("click", () => {
+    calendarMonth.setMonth(calendarMonth.getMonth() + 1);
+    renderAvailabilityCalendar(officeHours);
+  });
+  const todayButton = document.createElement("button");
+  todayButton.type = "button";
+  todayButton.className = "small-button calendar-today-button";
+  todayButton.textContent = "Today";
+  todayButton.addEventListener("click", () => {
+    calendarMonth = new Date();
+    calendarMonth.setDate(1);
+    renderAvailabilityCalendar(officeHours);
+  });
+  toolbar.append(previousButton, monthLabel, nextButton, todayButton);
+
+  const weekdays = document.createElement("div");
+  weekdays.className = "calendar-weekdays";
+  ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].forEach((day) => {
+    const label = document.createElement("span");
+    label.textContent = day;
+    weekdays.appendChild(label);
+  });
 
   const grid = document.createElement("div");
-  grid.className = "calendar-grid upcoming-calendar-grid";
-  const dates = Array.from(
-    new Set(officeHours.map((officeHour) => officeHour.availability_date))
-  ).slice(0, 14);
+  grid.className = "calendar-month-grid";
+  const year = calendarMonth.getFullYear();
+  const month = calendarMonth.getMonth();
+  const firstDay = new Date(Date.UTC(year, month, 1)).getUTCDay();
+  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const today = new Date().toISOString().slice(0, 10);
 
-  dates.forEach((date) => {
-    const column = document.createElement("section");
-    column.className = "calendar-day";
-    const heading = document.createElement("h3");
-    heading.textContent = formatDate(date);
-    column.appendChild(heading);
+  for (let cell = 0; cell < 42; cell += 1) {
+    const dateNumber = cell - firstDay + 1;
+    const cellElement = document.createElement("section");
+    cellElement.className = "calendar-date-cell";
+
+    if (dateNumber < 1 || dateNumber > daysInMonth) {
+      cellElement.classList.add("is-muted");
+      grid.appendChild(cellElement);
+      continue;
+    }
+
+    const date = year + "-" +
+      String(month + 1).padStart(2, "0") + "-" +
+      String(dateNumber).padStart(2, "0");
+    if (date === today) {
+      cellElement.classList.add("is-today");
+    }
+
+    const number = document.createElement("span");
+    number.className = "calendar-date-number";
+    number.textContent = String(dateNumber);
+    cellElement.appendChild(number);
 
     officeHours
       .filter((officeHour) => officeHour.availability_date === date)
       .forEach((officeHour) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "calendar-office-hour";
-        const time = document.createElement("strong");
-        time.textContent =
-          formatTime(officeHour.start_time) +
-          " - " +
-          formatTime(officeHour.end_time);
-        const course = document.createElement("span");
-        course.textContent = officeHour.course_name;
-        const teacher = document.createElement("small");
-        teacher.textContent = officeHour.instructor_name;
-        button.append(time, course, teacher);
-        button.addEventListener("click", () => {
+        const event = document.createElement("button");
+        event.type = "button";
+        event.className = "calendar-event";
+        event.textContent =
+          formatTime(officeHour.start_time) + " " + officeHour.course_name;
+        event.setAttribute(
+          "aria-label",
+          formatDate(date) + ", " +
+            formatTime(officeHour.start_time) + " - " +
+            formatTime(officeHour.end_time) + ", " +
+            officeHour.course_name + " with " +
+            officeHour.instructor_name
+        );
+        event.addEventListener("click", () => {
           openAppointmentDialog(officeHour);
         });
-        column.appendChild(button);
+        cellElement.appendChild(event);
       });
-    grid.appendChild(column);
-  });
 
-  if (dates.length === 0) {
-    const empty = document.createElement("p");
-    empty.textContent = "No upcoming office hours are available.";
-    availabilityCalendar.appendChild(empty);
-    return;
+    grid.appendChild(cellElement);
   }
 
-  availabilityCalendar.appendChild(grid);
-}
-
-function createOfficeHourCard(officeHour) {
-  const card = document.createElement("article");
-  card.className = "student-office-hour-card";
-  const title = document.createElement("h3");
-  title.textContent =
-    officeHour.course_name + " with " + officeHour.instructor_name;
-  const date = document.createElement("p");
-  date.textContent =
-    formatDate(officeHour.availability_date) + ", " +
-    formatTime(officeHour.start_time) + " - " +
-    formatTime(officeHour.end_time);
-  const location = document.createElement("p");
-  location.textContent =
-    officeHour.location + " / " + officeHour.meeting_mode;
-  const capacity = document.createElement("p");
-  capacity.textContent =
-    "Spots available: " +
-    Math.max(0, Number(officeHour.capacity || 1) -
-      Number(officeHour.booked_count || 0));
-
-  const actions = document.createElement("div");
-  actions.className = "student-office-hour-actions";
-  const teacherLink = document.createElement("a");
-  teacherLink.href =
-    "/teacher/" + encodeURIComponent(officeHour.teacher_slug);
-  teacherLink.className = "student-teacher-button";
-  teacherLink.textContent = "View Teacher Profile";
-  const requestButton = document.createElement("button");
-  requestButton.type = "button";
-  requestButton.textContent = "Request This Time";
-  requestButton.addEventListener("click", () => {
-    openAppointmentDialog(officeHour);
-  });
-  actions.append(teacherLink, requestButton);
-  card.append(title, date, location, capacity, actions);
-  return card;
+  availabilityCalendar.append(toolbar, weekdays, grid);
 }
 
 function openAppointmentDialog(officeHour) {
@@ -237,22 +347,68 @@ function openAppointmentDialog(officeHour) {
   appointmentDialog.showModal();
 }
 
-async function loadAvailableOfficeHours() {
-  const response = await fetch("/api/available-office-hours");
+async function loadAvailableOfficeHours(teacherSlug) {
+  const response = await fetch(
+    "/api/available-office-hours?teacher=" +
+      encodeURIComponent(teacherSlug)
+  );
   availableOfficeHours = await getResponseData(response);
   renderAvailabilityCalendar(availableOfficeHours);
-  officeHourList.replaceChildren();
+  officeHourMessage.textContent = availableOfficeHours.length > 0
+    ? "Select an available time to request an appointment."
+    : "This teacher does not have any open office-hour times yet.";
+}
 
-  if (availableOfficeHours.length === 0) {
-    const emptyMessage = document.createElement("p");
-    emptyMessage.textContent = "There are no available office hours right now.";
-    officeHourList.appendChild(emptyMessage);
+async function findTeacher(value, officeHourId, scheduledDate) {
+  const teacherSlug = extractTeacherSlug(value);
+  if (!teacherSlug) {
+    teacherFinderMessage.textContent =
+      "Enter a teacher code or a valid /teacher/ profile link.";
     return;
   }
 
-  availableOfficeHours.forEach((officeHour) => {
-    officeHourList.appendChild(createOfficeHourCard(officeHour));
-  });
+  const findTeacherButton = teacherFinderForm.querySelector(
+    'button[type="submit"]'
+  );
+  findTeacherButton.disabled = true;
+  teacherFinderMessage.textContent = "Finding teacher...";
+  try {
+    const response = await fetch(
+      "/api/teachers/" + encodeURIComponent(teacherSlug)
+    );
+    const profile = await getResponseData(response);
+    selectedTeacherSlug = profile.teacher.teacher_slug;
+    teacherLookupInput.value = selectedTeacherSlug;
+    selectedTeacherName.textContent = profile.teacher.display_name;
+    renderTeacherDetails(profile);
+
+    if (scheduledDate && /^\d{4}-\d{2}-\d{2}$/.test(scheduledDate)) {
+      calendarMonth = new Date(scheduledDate + "T12:00:00Z");
+      calendarMonth.setDate(1);
+    } else {
+      calendarMonth = new Date();
+      calendarMonth.setDate(1);
+    }
+
+    await loadAvailableOfficeHours(selectedTeacherSlug);
+    teacherFinder.hidden = true;
+    teacherResults.hidden = false;
+    teacherFinderMessage.textContent = "";
+
+    const requestedOfficeHourId = Number(officeHourId);
+    const requestedOfficeHour = availableOfficeHours.find(
+      (officeHour) =>
+        officeHour.id === requestedOfficeHourId &&
+        (!scheduledDate || officeHour.availability_date === scheduledDate)
+    );
+    if (requestedOfficeHour) {
+      openAppointmentDialog(requestedOfficeHour);
+    }
+  } catch (error) {
+    teacherFinderMessage.textContent = error.message;
+  } finally {
+    findTeacherButton.disabled = false;
+  }
 }
 
 improveQuestionButton.addEventListener("click", async () => {
@@ -310,6 +466,10 @@ addParticipantButton.addEventListener("click", addParticipantRow);
 
 appointmentForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (!validateStudentEmail()) {
+    studentEmailInput.focus();
+    return;
+  }
   submitButton.disabled = true;
   formMessage.textContent = "Submitting request...";
 
@@ -359,6 +519,36 @@ closeAppointmentDialogButton.addEventListener("click", () => {
   appointmentDialog.close();
 });
 
-loadAvailableOfficeHours().catch((error) => {
-  officeHourMessage.textContent = error.message;
+teacherFinderForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  findTeacher(teacherLookupInput.value).catch((error) => {
+    teacherFinderMessage.textContent = error.message;
+  });
 });
+
+changeTeacherButton.addEventListener("click", () => {
+  selectedTeacherSlug = "";
+  availableOfficeHours = [];
+  teacherResults.hidden = true;
+  teacherFinder.hidden = false;
+  teacherFinderMessage.textContent = "";
+  availabilityCalendar.replaceChildren();
+  bookingStatusMessage.textContent = "";
+  teacherLookupInput.focus();
+});
+
+const pageParams = new URLSearchParams(window.location.search);
+const initialTeacher = pageParams.get("teacher");
+if (initialTeacher) {
+  teacherLookupInput.value = initialTeacher;
+  findTeacher(
+    initialTeacher,
+    pageParams.get("officeHour"),
+    pageParams.get("date")
+  ).catch((error) => {
+    teacherFinderMessage.textContent = error.message;
+  });
+} else {
+  availabilityCalendar.replaceChildren();
+  officeHourMessage.textContent = "Find a teacher to view availability.";
+}

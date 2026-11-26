@@ -25,20 +25,53 @@
         </p>
       </section>
 
-      <section class="student-section">
-        <h2>Availability</h2>
+      <section id="teacher-finder" class="student-section">
+        <p class="dashboard-label">Step 1</p>
+        <h2>Find Your Teacher</h2>
+        <p>
+          Enter the teacher code or paste the public teacher profile link shared
+          by your instructor. Availability will appear after the teacher is found.
+        </p>
+        <form id="teacher-finder-form" class="teacher-finder-form" novalidate>
+          <label for="teacher-lookup">Teacher code or profile link</label>
+          <input
+            id="teacher-lookup"
+            type="text"
+            maxlength="300"
+            placeholder="Example: taylor or /teacher/taylor"
+            autocomplete="off"
+            required
+          />
+          <button type="submit">Find Teacher</button>
+          <p id="teacher-finder-message" class="field-error" role="alert"></p>
+        </form>
+      </section>
+
+      <section id="teacher-results" class="student-section" hidden>
+        <div class="teacher-selection-heading">
+          <div>
+            <p class="dashboard-label">Selected Teacher</p>
+            <h2 id="selected-teacher-name"></h2>
+            <p id="selected-teacher-info" class="calendar-help"></p>
+          </div>
+          <button id="change-teacher" class="small-button" type="button">
+            Choose Different Teacher
+          </button>
+        </div>
+
+        <div id="selected-teacher-details" class="teacher-info-grid"></div>
+
+        <h2>Availability Calendar</h2>
         <p class="calendar-help">
-          Choose a time from the upcoming availability chart or the list below.
+          Choose a time directly from this teacher's calendar. Available times
+          appear inside their dates.
         </p>
         <div
           id="availability-calendar"
           class="availability-calendar"
-          aria-label="Upcoming office-hour availability"
+          aria-label="Selected teacher's office-hour availability"
         ></div>
         <p id="office-hour-message" class="student-message"></p>
-        <div id="office-hour-list">
-          <p>Loading office hours...</p>
-        </div>
         <p id="booking-status-message" class="student-message" aria-live="polite"></p>
       </section>
 
@@ -69,7 +102,7 @@
         <span id="selected-location" class="selected-office-detail"></span>
       </div>
 
-      <form id="appointment-form">
+      <form id="appointment-form" novalidate>
         <input id="office-hour-id" type="hidden" />
         <input id="scheduled-date" type="hidden" />
         <input
@@ -101,6 +134,7 @@
           placeholder="you@example.com"
           required
         />
+        <p id="student-email-error" class="field-error" role="alert"></p>
 
         <label for="assignment">Assignment or Topic</label>
         <input

@@ -1,7 +1,8 @@
 const teacherWelcome = document.getElementById("teacher-welcome");
+const teacherProfileLink = document.getElementById("teacher-profile-link");
 const officeHourList = document.getElementById("office-hour-list");
 const appointmentList = document.getElementById("appointment-list");
-const teacherCalendar = document.getElementById("teacher-calendar");
+const upcomingMeetings = document.getElementById("upcoming-meetings");
 const teacherMessage = document.getElementById("teacher-message");
 const appointmentFilter = document.getElementById("appointment-filter");
 const officeHourDialog = document.getElementById("office-hour-dialog");
@@ -17,6 +18,29 @@ const dayInput = document.getElementById("day-of-week");
 const dayLabel = document.getElementById("day-label");
 const dateInput = document.getElementById("specific-date");
 const dateLabel = document.getElementById("date-label");
+const declineDialog = document.getElementById("decline-dialog");
+const declineForm = document.getElementById("decline-form");
+const declineSummary = document.getElementById("decline-summary");
+const declineReasonInput = document.getElementById("decline-reason");
+const declineFormMessage = document.getElementById("decline-form-message");
+const closeDeclineDialogButton = document.getElementById("close-decline-dialog");
+const cancelDeclineButton = document.getElementById("cancel-decline");
+const submitDeclineButton = document.getElementById("submit-decline");
+const cancelMeetingDialog = document.getElementById("cancel-meeting-dialog");
+const cancelMeetingForm = document.getElementById("cancel-meeting-form");
+const cancelMeetingSummary = document.getElementById("cancel-meeting-summary");
+const cancelMeetingReasonInput = document.getElementById("cancel-meeting-reason");
+const cancelMeetingFormMessage = document.getElementById("cancel-meeting-form-message");
+const closeCancelMeetingDialogButton = document.getElementById(
+  "close-cancel-meeting-dialog"
+);
+const keepMeetingButton = document.getElementById("keep-meeting");
+const submitCancelMeetingButton = document.getElementById(
+  "submit-cancel-meeting"
+);
+
+let pendingDeclineAppointment = null;
+let pendingCancelAppointment = null;
 
 function formatTime(timeValue) {
   if (!timeValue) {
@@ -268,16 +292,30 @@ function createAppointmentCard(appointment) {
         ? "Decline Reschedule"
         : "Decline";
     decline.addEventListener("click", () => {
-      const reason = window.prompt(
-        "Optional message to the student:",
-        ""
-      );
-      if (reason === null) {
-        return;
-      }
-      updateAppointmentStatus(appointment.id, "Declined", reason);
+      openDeclineDialog(appointment);
     });
     actions.append(approve, decline);
+  }
+
+  if (appointment.status === "Declined") {
+    const reopen = document.createElement("button");
+    reopen.type = "button";
+    reopen.textContent = "Reopen Request";
+    reopen.addEventListener("click", () => {
+      reopenAppointment(appointment.id);
+    });
+    actions.appendChild(reopen);
+  }
+
+  if (appointment.status === "Approved") {
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "decline-button";
+    cancel.textContent = "Cancel Meeting";
+    cancel.addEventListener("click", () => {
+      openCancelMeetingDialog(appointment);
+    });
+    actions.appendChild(cancel);
   }
 
   card.append(
@@ -312,46 +350,201 @@ async function loadAppointments() {
   });
 }
 
-async function loadTeacherCalendar() {
+function createUpcomingMeetingCard(appointment) {
+  const card = document.createElement("article");
+  card.className = "upcoming-meeting-card";
+
+  const date = document.createElement("p");
+  date.className = "upcoming-meeting-date";
+  const meetingDate = appointment.scheduled_date
+    ? String(appointment.scheduled_date).slice(0, 10)
+    : "";
+  const today = new Date().toISOString().slice(0, 10);
+  if (!meetingDate) {
+    date.textContent = "Date not assigned";
+    card.classList.add("is-undated");
+  } else if (meetingDate < today) {
+    date.textContent = "Past meeting · " + formatDate(meetingDate);
+    card.classList.add("is-past");
+  } else {
+    date.textContent = formatDate(meetingDate);
+  }
+
+  const time = document.createElement("p");
+  time.className = "upcoming-meeting-time";
+  time.textContent =
+    formatTime(appointment.start_time) + " - " +
+    formatTime(appointment.end_time);
+
+  const course = document.createElement("h3");
+  course.textContent = appointment.course_name;
+
+  const student = document.createElement("p");
+  student.textContent =
+    (appointment.student_name || "Guest") +
+    " · " +
+    (appointment.student_email || "No email");
+
+  const location = document.createElement("p");
+  location.className = "upcoming-meeting-location";
+  location.textContent =
+    appointment.location + " / " + appointment.meeting_mode;
+
+  const status = document.createElement("span");
+  status.className = "appointment-status approved";
+  status.textContent = "Approved";
+
+  const actions = document.createElement("div");
+  actions.className = "appointment-actions";
+  const cancel = document.createElement("button");
+  cancel.type = "button";
+  cancel.className = "decline-button small-button";
+  cancel.textContent = "Cancel";
+  cancel.addEventListener("click", () => {
+    openCancelMeetingDialog(appointment);
+  });
+  actions.appendChild(cancel);
+
+  card.append(date, time, course, student, location, status, actions);
+  return card;
+}
+
+async function loadUpcomingMeetings() {
   const response = await fetch("/api/appointments?status=Approved");
   const appointments = await getResponseData(response);
-  teacherCalendar.replaceChildren();
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming = appointments
+    .filter((appointment) =>
+      appointment.scheduled_date &&
+      String(appointment.scheduled_date).slice(0, 10) >= today
+    )
+    .sort((first, second) => {
+      const firstStart = String(first.scheduled_date).slice(0, 10) +
+        "T" + first.start_time;
+      const secondStart = String(second.scheduled_date).slice(0, 10) +
+        "T" + second.start_time;
+      return firstStart.localeCompare(secondStart);
+    });
+  const olderOrUndated = appointments
+    .filter((appointment) =>
+      !appointment.scheduled_date ||
+      String(appointment.scheduled_date).slice(0, 10) < today
+    )
+    .sort((first, second) => {
+      const firstDate = first.scheduled_date
+        ? String(first.scheduled_date).slice(0, 10)
+        : "";
+      const secondDate = second.scheduled_date
+        ? String(second.scheduled_date).slice(0, 10)
+        : "";
+      return secondDate.localeCompare(firstDate);
+    });
+  const allApproved = upcoming.concat(olderOrUndated);
 
-  if (appointments.length === 0) {
+  upcomingMeetings.replaceChildren();
+  if (allApproved.length === 0) {
     const empty = document.createElement("p");
-    empty.textContent = "No approved meetings are scheduled.";
-    teacherCalendar.appendChild(empty);
+    empty.className = "upcoming-meetings-empty";
+    empty.textContent = "No approved meetings are scheduled yet.";
+    upcomingMeetings.appendChild(empty);
     return;
   }
 
-  const grid = document.createElement("div");
-  grid.className = "calendar-grid upcoming-calendar-grid";
-  const dates = Array.from(
-    new Set(appointments.map((appointment) => appointment.scheduled_date))
-  );
-
-  dates.forEach((date) => {
-    const column = document.createElement("section");
-    column.className = "calendar-day";
-    const heading = document.createElement("h3");
-    heading.textContent = formatDate(date);
-    column.appendChild(heading);
-
-    appointments
-      .filter((appointment) => appointment.scheduled_date === date)
-      .forEach((appointment) => {
-        const meeting = document.createElement("p");
-        meeting.textContent =
-          formatTime(appointment.start_time) + " - " +
-          formatTime(appointment.end_time) + " | " +
-          appointment.student_name + " | " +
-          appointment.course_name;
-        column.appendChild(meeting);
-      });
-    grid.appendChild(column);
+  upcoming.slice(0, 10).forEach((appointment) => {
+    upcomingMeetings.appendChild(createUpcomingMeetingCard(appointment));
   });
 
-  teacherCalendar.appendChild(grid);
+  if (olderOrUndated.length > 0) {
+    const historyHeading = document.createElement("h3");
+    historyHeading.className = "upcoming-secondary-heading";
+    historyHeading.textContent = upcoming.length > 0
+      ? "Earlier approved meetings"
+      : "Approved meetings";
+    upcomingMeetings.appendChild(historyHeading);
+    olderOrUndated.slice(0, 10).forEach((appointment) => {
+      upcomingMeetings.appendChild(createUpcomingMeetingCard(appointment));
+    });
+  }
+}
+
+function openDeclineDialog(appointment) {
+  pendingDeclineAppointment = appointment;
+  declineSummary.textContent =
+    "Decline the request from " +
+    (appointment.student_name || "this student") +
+    " for " +
+    formatDate(
+      appointment.request_kind === "Reschedule"
+        ? appointment.requested_scheduled_date
+        : appointment.scheduled_date
+    ) +
+    "?";
+  declineReasonInput.value = "";
+  declineFormMessage.textContent = "";
+  declineDialog.showModal();
+  declineReasonInput.focus();
+}
+
+function closeDeclineDialog() {
+  pendingDeclineAppointment = null;
+  declineFormMessage.textContent = "";
+  declineDialog.close();
+}
+
+function openCancelMeetingDialog(appointment) {
+  pendingCancelAppointment = appointment;
+  cancelMeetingSummary.textContent =
+    "Cancel the approved meeting with " +
+    (appointment.student_name || "this student") +
+    " on " +
+    formatDate(appointment.scheduled_date) +
+    "?";
+  cancelMeetingReasonInput.value = "";
+  cancelMeetingFormMessage.textContent = "";
+  cancelMeetingDialog.showModal();
+  cancelMeetingReasonInput.focus();
+}
+
+function closeCancelMeetingDialog() {
+  pendingCancelAppointment = null;
+  cancelMeetingFormMessage.textContent = "";
+  cancelMeetingDialog.close();
+}
+
+async function reopenAppointment(appointmentId) {
+  try {
+    const response = await fetch(
+      "/api/appointments/" + appointmentId + "/reopen",
+      { method: "POST" }
+    );
+    const data = await getResponseData(response);
+    teacherMessage.textContent = data.message;
+    await loadAppointments();
+    await loadUpcomingMeetings();
+  } catch (error) {
+    teacherMessage.textContent = error.message;
+  }
+}
+
+async function cancelApprovedMeeting(appointmentId, reason) {
+  try {
+    const response = await fetch(
+      "/api/appointments/" + appointmentId + "/cancel",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ reason })
+      }
+    );
+    const data = await getResponseData(response);
+    teacherMessage.textContent = data.message;
+    await loadAppointments();
+    await loadUpcomingMeetings();
+  } catch (error) {
+    teacherMessage.textContent = error.message;
+  }
 }
 
 async function updateAppointmentStatus(appointmentId, status, declineReason) {
@@ -372,11 +565,48 @@ async function updateAppointmentStatus(appointmentId, status, declineReason) {
     const data = await getResponseData(response);
     teacherMessage.textContent = data.message;
     await loadAppointments();
-    await loadTeacherCalendar();
+    await loadUpcomingMeetings();
   } catch (error) {
     teacherMessage.textContent = error.message;
   }
 }
+
+closeDeclineDialogButton.addEventListener("click", closeDeclineDialog);
+cancelDeclineButton.addEventListener("click", closeDeclineDialog);
+declineForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!pendingDeclineAppointment) {
+    return;
+  }
+
+  submitDeclineButton.disabled = true;
+  declineFormMessage.textContent = "Declining request...";
+  const appointment = pendingDeclineAppointment;
+  const reason = declineReasonInput.value.trim();
+  closeDeclineDialog();
+  await updateAppointmentStatus(appointment.id, "Declined", reason);
+  submitDeclineButton.disabled = false;
+});
+
+closeCancelMeetingDialogButton.addEventListener(
+  "click",
+  closeCancelMeetingDialog
+);
+keepMeetingButton.addEventListener("click", closeCancelMeetingDialog);
+cancelMeetingForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!pendingCancelAppointment) {
+    return;
+  }
+
+  submitCancelMeetingButton.disabled = true;
+  cancelMeetingFormMessage.textContent = "Cancelling meeting...";
+  const appointment = pendingCancelAppointment;
+  const reason = cancelMeetingReasonInput.value.trim();
+  closeCancelMeetingDialog();
+  await cancelApprovedMeeting(appointment.id, reason);
+  submitCancelMeetingButton.disabled = false;
+});
 
 scheduleTypeInput.addEventListener("change", updateScheduleFields);
 
@@ -438,7 +668,7 @@ refreshOfficeHoursButton.addEventListener("click", () => {
   Promise.all([loadOfficeHours(), loadAppointments()]).catch((error) => {
     teacherMessage.textContent = error.message;
   });
-  loadTeacherCalendar().catch((error) => {
+  loadUpcomingMeetings().catch((error) => {
     teacherMessage.textContent = error.message;
   });
 });
@@ -457,11 +687,17 @@ async function initializeDashboard() {
       return;
     }
     teacherWelcome.textContent = "Welcome, " + user.displayName;
+    if (user.teacherSlug) {
+      const link = document.createElement("a");
+      link.href = "/teacher/" + encodeURIComponent(user.teacherSlug);
+      link.textContent = "Share your public teacher profile link";
+      teacherProfileLink.replaceChildren(link);
+    }
     updateScheduleFields();
     await Promise.all([
       loadOfficeHours(),
       loadAppointments(),
-      loadTeacherCalendar()
+      loadUpcomingMeetings()
     ]);
   } catch (error) {
     teacherMessage.textContent = error.message;

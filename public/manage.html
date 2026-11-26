@@ -40,6 +40,39 @@
           Request Reschedule
         </button>
       </section>
+
+      <dialog id="cancel-dialog" class="appointment-action-dialog">
+        <form id="cancel-form" novalidate>
+          <div class="dialog-heading">
+            <h2>Cancel Appointment</h2>
+            <button
+              id="close-cancel-dialog"
+              class="close-dialog-button"
+              type="button"
+            >
+              ×
+            </button>
+          </div>
+          <p>Are you sure you want to cancel this appointment?</p>
+          <label for="cancel-reason">
+            Note <span class="form-help">(optional)</span>
+          </label>
+          <textarea
+            id="cancel-reason"
+            maxlength="500"
+            placeholder="Add a note for the teacher, if helpful."
+          ></textarea>
+          <div class="dialog-actions">
+            <button id="keep-appointment" class="small-button" type="button">
+              Keep Appointment
+            </button>
+            <button id="submit-cancel" class="decline-button" type="submit">
+              Cancel Appointment
+            </button>
+          </div>
+          <p id="cancel-form-message" class="dialog-form-message" role="alert"></p>
+        </form>
+      </dialog>
     </main>
 
     <script src="/manage.js"></script>

@@ -20,46 +20,58 @@
         <p class="dashboard-label">Teacher Dashboard</p>
         <h1 id="teacher-welcome">Welcome</h1>
         <p>Manage availability, impromptu meetings, and student requests.</p>
+        <p id="teacher-profile-link" class="entry-help"></p>
         <button id="open-office-hour-dialog" type="button">
           Create Office Hour
         </button>
       </section>
 
-      <section class="dashboard-card">
-        <div class="section-heading">
-          <h2>Office Hours</h2>
-          <button id="refresh-office-hours" class="small-button" type="button">
-            Refresh
-          </button>
-        </div>
-        <div id="office-hour-list">
-          <p>Loading office hours...</p>
-        </div>
-      </section>
+      <div class="dashboard-layout">
+        <div class="dashboard-main">
+          <section class="dashboard-card">
+            <div class="section-heading">
+              <h2>Office Hours</h2>
+              <button id="refresh-office-hours" class="small-button" type="button">
+                Refresh
+              </button>
+            </div>
+            <div id="office-hour-list">
+              <p>Loading office hours...</p>
+            </div>
+          </section>
 
-      <section class="dashboard-card">
-        <div class="section-heading">
-          <h2>Appointment Requests</h2>
-          <select id="appointment-filter" class="small-select">
-            <option value="Pending">Pending</option>
-            <option value="Approved">Approved</option>
-            <option value="Declined">Declined</option>
-            <option value="Cancelled">Cancelled</option>
-            <option value="All">All</option>
-          </select>
+          <section class="dashboard-card">
+            <div class="section-heading">
+              <h2>Appointment Requests</h2>
+              <select id="appointment-filter" class="small-select">
+                <option value="Pending">Pending</option>
+                <option value="Approved">Approved</option>
+                <option value="Declined">Declined</option>
+                <option value="Cancelled">Cancelled</option>
+                <option value="All">All</option>
+              </select>
+            </div>
+            <p id="teacher-message" class="dashboard-message"></p>
+            <div id="appointment-list">
+              <p>Loading appointments...</p>
+            </div>
+          </section>
         </div>
-        <p id="teacher-message" class="dashboard-message"></p>
-        <div id="appointment-list">
-          <p>Loading appointments...</p>
-        </div>
-      </section>
 
-      <section class="dashboard-card">
-        <h2>Approved Meeting Calendar</h2>
-        <div id="teacher-calendar">
-          <p>Loading approved meetings...</p>
-        </div>
-      </section>
+        <aside class="dashboard-card upcoming-meetings-panel">
+          <div class="upcoming-meetings-header">
+            <p class="dashboard-label">Next on your schedule</p>
+            <h2>Upcoming Meetings</h2>
+            <p class="upcoming-panel-help">
+              Upcoming meetings appear first. Older approved records remain below
+              so they can still be managed.
+            </p>
+          </div>
+          <div id="upcoming-meetings">
+            <p>Loading upcoming meetings...</p>
+          </div>
+        </aside>
+      </div>
     </main>
 
     <dialog id="office-hour-dialog" class="office-hour-dialog">
@@ -143,6 +155,72 @@
 
         <button type="submit">Save Office Hour</button>
         <p id="office-hour-form-message"></p>
+      </form>
+    </dialog>
+
+    <dialog id="decline-dialog" class="appointment-action-dialog">
+      <form id="decline-form" novalidate>
+        <div class="dialog-heading">
+          <h2>Decline Request</h2>
+          <button
+            id="close-decline-dialog"
+            class="close-dialog-button"
+            type="button"
+          >
+            ×
+          </button>
+        </div>
+        <p id="decline-summary" class="dialog-summary"></p>
+        <label for="decline-reason">
+          Message to the student <span class="form-help">(optional)</span>
+        </label>
+        <textarea
+          id="decline-reason"
+          maxlength="500"
+          placeholder="Explain why the request was declined or suggest another option."
+        ></textarea>
+        <div class="dialog-actions">
+          <button id="cancel-decline" class="small-button" type="button">
+            Keep Request
+          </button>
+          <button id="submit-decline" class="decline-button" type="submit">
+            Decline Request
+          </button>
+        </div>
+        <p id="decline-form-message" class="dialog-form-message" role="alert"></p>
+      </form>
+    </dialog>
+
+    <dialog id="cancel-meeting-dialog" class="appointment-action-dialog">
+      <form id="cancel-meeting-form" novalidate>
+        <div class="dialog-heading">
+          <h2>Cancel Meeting</h2>
+          <button
+            id="close-cancel-meeting-dialog"
+            class="close-dialog-button"
+            type="button"
+          >
+            ×
+          </button>
+        </div>
+        <p id="cancel-meeting-summary" class="dialog-summary"></p>
+        <label for="cancel-meeting-reason">
+          Message to the student <span class="form-help">(optional)</span>
+        </label>
+        <textarea
+          id="cancel-meeting-reason"
+          maxlength="500"
+          placeholder="Explain the cancellation or provide next steps."
+        ></textarea>
+        <div class="dialog-actions">
+          <button id="keep-meeting" class="small-button" type="button">
+            Keep Meeting
+          </button>
+          <button id="submit-cancel-meeting" class="decline-button" type="submit">
+            Cancel Meeting
+          </button>
+        </div>
+        <p id="cancel-meeting-form-message" class="dialog-form-message" role="alert"></p>
       </form>
     </dialog>
 

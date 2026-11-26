@@ -57,6 +57,17 @@ async function ensureDatabaseSchema() {
   `);
 
   await pool.query(`
+    ALTER TABLE appointments
+      DROP CONSTRAINT IF EXISTS appointments_status_check
+  `);
+
+  await pool.query(`
+    ALTER TABLE appointments
+      ADD CONSTRAINT appointments_status_check
+      CHECK (status IN ('Pending', 'Approved', 'Declined', 'Cancelled'))
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS appointment_participants (
       id SERIAL PRIMARY KEY,
       appointment_id INTEGER NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
@@ -408,6 +419,10 @@ app.use(
   })
 );
 
+app.get("/", (request, response) => {
+  response.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
 app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/teacher/:slug", (request, response) => {
@@ -538,9 +553,12 @@ function readOfficeHourInput(body) {
     ? dayOfWeekForDate(specificDate)
     : body.dayOfWeek;
 
-  if (!["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].includes(dayOfWeek)) {
+  if (
+    !specificDate &&
+    !["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"].includes(dayOfWeek)
+  ) {
     return {
-      error: "Please select a valid weekday."
+      error: "Please select a valid weekday for recurring office hours."
     };
   }
 
@@ -1074,9 +1092,12 @@ app.get(
 app.get(
   "/api/available-office-hours",
   async (request, response) => {
+    const teacherSlug =
+      typeof request.query.teacher === "string"
+        ? request.query.teacher.trim().toLowerCase()
+        : "";
     try {
-      const officeHourResult = await pool.query(
-        `
+      let officeHourQuery = `
           SELECT
             office_hours.id,
             office_hours.course_name,
@@ -1096,7 +1117,15 @@ app.get(
           JOIN app_users
             ON office_hours.teacher_id = app_users.id
           WHERE office_hours.is_available = true
-        `
+        `;
+      const officeHourQueryValues = [];
+      if (teacherSlug) {
+        officeHourQuery += " AND app_users.teacher_slug = $1";
+        officeHourQueryValues.push(teacherSlug);
+      }
+      const officeHourResult = await pool.query(
+        officeHourQuery,
+        officeHourQueryValues
       );
 
       const bookedResult = await pool.query(
@@ -1125,7 +1154,7 @@ app.get(
             dates.push(date);
           }
         } else {
-          for (let offset = 0; offset < 35; offset += 1) {
+          for (let offset = 0; offset < 90; offset += 1) {
             const date = addDays(todayIso(), offset);
             if (dayOfWeekForDate(date) === officeHour.day_of_week) {
               dates.push(date);
@@ -1614,6 +1643,10 @@ app.get("/api/manage/:token", async (request, response) => {
 });
 
 app.post("/api/manage/:token/cancel", async (request, response) => {
+  const reason =
+    typeof request.body.reason === "string"
+      ? request.body.reason.trim().slice(0, 500)
+      : "";
   try {
     const result = await loadManagedAppointment(request.params.token);
     if (result.error) {
@@ -1630,8 +1663,8 @@ app.post("/api/manage/:token/cancel", async (request, response) => {
 
     await pool.query(
       "UPDATE appointments SET status = 'Cancelled', " +
-      "decline_reason = NULL WHERE id = $1",
-      [appointment.id]
+      "decline_reason = $1 WHERE id = $2",
+      [reason || "Cancelled by the student.", appointment.id]
     );
     const newToken = await rotateManagementToken(appointment.id);
     sendMeetingEmail({
@@ -1641,6 +1674,7 @@ app.post("/api/manage/:token/cancel", async (request, response) => {
         "Hi " + (appointment.student_name || "there") + ",",
         "",
         "Your office-hour appointment has been cancelled.",
+        reason ? "Note: " + reason : "",
         "Manage your request: " + managementUrl(newToken)
       ].join("\n")
     }).catch((emailError) => {
@@ -2141,6 +2175,228 @@ app.patch(
       console.error("Could not update appointment:", error.message);
       response.status(500).json({
         message: "Appointment status could not be updated."
+      });
+    } finally {
+      client.release();
+    }
+  }
+);
+
+app.post(
+  "/api/appointments/:id/reopen",
+  requireRole("teacher"),
+  async (request, response) => {
+    const appointmentId = Number(request.params.id);
+    if (!Number.isInteger(appointmentId)) {
+      return response.status(400).json({
+        message: "Invalid appointment ID."
+      });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const currentResult = await client.query(
+        "SELECT a.*, oh.teacher_id, oh.capacity " +
+        "FROM appointments a JOIN office_hours oh " +
+        "ON a.office_hour_id = oh.id " +
+        "WHERE a.id = $1 AND oh.teacher_id = $2 FOR UPDATE",
+        [appointmentId, request.session.user.id]
+      );
+      const current = currentResult.rows[0];
+
+      if (!current) {
+        await client.query("ROLLBACK");
+        return response.status(404).json({
+          message: "Appointment not found."
+        });
+      }
+      if (current.status !== "Declined") {
+        await client.query("ROLLBACK");
+        return response.status(409).json({
+          message: "Only declined requests can be reopened."
+        });
+      }
+      if (
+        !current.scheduled_date ||
+        String(current.scheduled_date).slice(0, 10) < todayIso()
+      ) {
+        await client.query("ROLLBACK");
+        return response.status(409).json({
+          message: "This request's meeting date has already passed."
+        });
+      }
+
+      const bookedResult = await client.query(
+        "SELECT COUNT(*)::int AS booked_count FROM appointments " +
+        "WHERE office_hour_id = $1 AND scheduled_date = $2 " +
+        "AND status IN ('Pending', 'Approved') AND id <> $3",
+        [current.office_hour_id, current.scheduled_date, appointmentId]
+      );
+      if (
+        bookedResult.rows[0].booked_count >= Number(current.capacity || 1)
+      ) {
+        await client.query("ROLLBACK");
+        return response.status(409).json({
+          message: "That office-hour time is already full."
+        });
+      }
+
+      const tokenDetails = createManagementToken();
+      await client.query(
+        "UPDATE appointments SET status = 'Pending', " +
+        "request_kind = 'New', decline_reason = NULL, " +
+        "requested_office_hour_id = NULL, requested_scheduled_date = NULL, " +
+        "management_token_hash = $1, management_token_expires_at = $2, " +
+        "reminder_sent_at = NULL WHERE id = $3",
+        [tokenDetails.tokenHash, tokenDetails.expiresAt, appointmentId]
+      );
+      await client.query("COMMIT");
+
+      const managed = await loadManagedAppointment(tokenDetails.token);
+      const updated = managed.appointment;
+      sendMeetingEmail({
+        to: updated.student_email,
+        subject: "Office-hour request reopened",
+        text: [
+          "Hi " + (updated.student_name || "there") + ",",
+          "",
+          "Your office-hour request was reopened and is waiting for teacher review.",
+          "Course: " + updated.course_name,
+          "Date: " + formatDate(updated.scheduled_date),
+          "Time: " + updated.start_time + " - " + updated.end_time,
+          "",
+          "Manage your request: " + managementUrl(tokenDetails.token)
+        ].join("\n")
+      }).catch((emailError) => {
+        console.error("Could not send reopen email:", emailError.message);
+      });
+
+      response.json({
+        message: "The appointment request was reopened.",
+        appointment: {
+          id: updated.id,
+          status: updated.status
+        }
+      });
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => {});
+      console.error("Could not reopen appointment:", error.message);
+      response.status(500).json({
+        message: "The appointment request could not be reopened."
+      });
+    } finally {
+      client.release();
+    }
+  }
+);
+
+app.post(
+  "/api/appointments/:id/cancel",
+  requireRole("teacher"),
+  async (request, response) => {
+    const appointmentId = Number(request.params.id);
+    const reason =
+      typeof request.body.reason === "string"
+        ? request.body.reason.trim().slice(0, 500)
+        : "";
+    if (!Number.isInteger(appointmentId)) {
+      return response.status(400).json({
+        message: "Invalid appointment ID."
+      });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const currentResult = await client.query(
+        "SELECT a.*, oh.teacher_id FROM appointments a " +
+        "JOIN office_hours oh ON a.office_hour_id = oh.id " +
+        "WHERE a.id = $1 AND oh.teacher_id = $2 FOR UPDATE",
+        [appointmentId, request.session.user.id]
+      );
+      const current = currentResult.rows[0];
+
+      if (!current) {
+        await client.query("ROLLBACK");
+        return response.status(404).json({
+          message: "Appointment not found."
+        });
+      }
+      if (current.status !== "Approved") {
+        await client.query("ROLLBACK");
+        return response.status(409).json({
+          message: "Only approved meetings can be cancelled here."
+        });
+      }
+
+      const tokenDetails = createManagementToken();
+      await client.query(
+        "UPDATE appointments SET status = 'Cancelled', " +
+        "request_kind = 'New', decline_reason = $1, " +
+        "requested_office_hour_id = NULL, requested_scheduled_date = NULL, " +
+        "management_token_hash = $2, management_token_expires_at = $3, " +
+        "reminder_sent_at = NULL WHERE id = $4",
+        [
+          reason || "The teacher cancelled this meeting.",
+          tokenDetails.tokenHash,
+          tokenDetails.expiresAt,
+          appointmentId
+        ]
+      );
+      await client.query("COMMIT");
+
+      const managed = await loadManagedAppointment(tokenDetails.token);
+      const updated = managed.appointment;
+      sendMeetingEmail({
+        to: updated.student_email,
+        subject: "Office-hour meeting cancelled",
+        text: [
+          "Hi " + (updated.student_name || "there") + ",",
+          "",
+          "Your approved office-hour meeting was cancelled by the teacher.",
+          reason ? "Message from the teacher: " + reason : "",
+          "Course: " + updated.course_name,
+          "Date: " + formatDate(updated.scheduled_date),
+          "Time: " + updated.start_time + " - " + updated.end_time,
+          "Manage your request: " + managementUrl(tokenDetails.token)
+        ].join("\n")
+      }).catch((emailError) => {
+        console.error("Could not send teacher cancellation email:", emailError.message);
+      });
+
+      if (updated.participants) {
+        updated.participants.forEach((participant) => {
+          sendMeetingEmail({
+            to: participant.email,
+            subject: "Office-hour meeting cancelled",
+            text: [
+              "Hi " + participant.name + ",",
+              "",
+              "The office-hour meeting you were invited to has been cancelled.",
+              reason ? "Message from the teacher: " + reason : "",
+              "Course: " + updated.course_name,
+              "Date: " + formatDate(updated.scheduled_date),
+              "Time: " + updated.start_time + " - " + updated.end_time
+            ].join("\n")
+          }).catch((emailError) => {
+            console.error("Could not send participant cancellation email:", emailError.message);
+          });
+        });
+      }
+
+      response.json({
+        message: "The approved meeting was cancelled.",
+        appointment: {
+          id: updated.id,
+          status: updated.status
+        }
+      });
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => {});
+      console.error("Could not cancel approved meeting:", error.message);
+      response.status(500).json({
+        message: "The meeting could not be cancelled."
       });
     } finally {
       client.release();
