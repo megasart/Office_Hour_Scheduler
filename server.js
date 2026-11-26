@@ -2,9 +2,11 @@ require("dotenv").config();
 
 const express = require("express");
 const path = require("path");
+const crypto = require("crypto");
 const session = require("express-session");
 const pgSession = require("connect-pg-simple")(session);
 const bcrypt = require("bcryptjs");
+const nodemailer = require("nodemailer");
 const pool = require("./db");
 const { GoogleGenAI } = require("@google/genai");
 
@@ -12,8 +14,50 @@ const gemini = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY
 });
 
+const mailer = process.env.SMTP_HOST
+  ? nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT || 587),
+      secure: process.env.SMTP_SECURE === "true",
+      auth: process.env.SMTP_USER
+        ? {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASSWORD
+          }
+        : undefined
+    })
+  : null;
+
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+async function ensureGuestBookingColumns() {
+  await pool.query(`
+    ALTER TABLE appointments
+      ADD COLUMN IF NOT EXISTS student_name TEXT,
+      ADD COLUMN IF NOT EXISTS student_email TEXT
+  `);
+}
+
+async function sendMeetingEmail({
+  to,
+  subject,
+  text
+}) {
+  if (!mailer || !to) {
+    console.warn(
+      "Email not sent. Configure SMTP_HOST, SMTP_USER, SMTP_PASSWORD, and SMTP_FROM."
+    );
+    return;
+  }
+
+  await mailer.sendMail({
+    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    to,
+    subject,
+    text
+  });
+}
 async function analyzeAppointment(assignment, problemDescription) {
   const response = await gemini.models.generateContent({
     model:
@@ -164,7 +208,6 @@ app.get("/api/teachers/:slug", async (request, response) => {
 
 app.post(
   "/api/improve-question",
-  requireRole("student"),
   async (request, response) => {
     const {
       assignment,
@@ -430,7 +473,6 @@ app.get(
 
 app.get(
   "/api/available-office-hours",
-  requireRole("student"),
   async (request, response) => {
     try {
       const result = await pool.query(
@@ -565,10 +607,11 @@ app.post(
 
 app.post(
   "/api/appointments",
-  requireRole("student"),
   async (request, response) => {
     const {
       officeHourId,
+      studentName,
+      studentEmail,
       assignment,
       problemDescription,
       meetingType
@@ -576,9 +619,16 @@ app.post(
 
     const numericOfficeHourId = Number(officeHourId);
     const validMeetingTypes = ["In-person", "Zoom"];
+    const normalizedEmail =
+      typeof studentEmail === "string"
+        ? studentEmail.trim().toLowerCase()
+        : "";
 
     if (
       !Number.isInteger(numericOfficeHourId) ||
+      typeof studentName !== "string" ||
+      studentName.trim() === "" ||
+      !/^\S+@\S+\.\S+$/.test(normalizedEmail) ||
       typeof assignment !== "string" ||
       assignment.trim() === "" ||
       typeof problemDescription !== "string" ||
@@ -606,6 +656,31 @@ app.post(
           message: "The selected office hour is not available."
         });
       }
+
+      const guestPassword = await bcrypt.hash(
+        crypto.randomUUID(),
+        10
+      );
+
+      const guestUser = await pool.query(
+        `
+          INSERT INTO app_users (
+            username,
+            password_hash,
+            role,
+            display_name
+          )
+          VALUES ($1, $2, 'student', $3)
+          ON CONFLICT (username)
+          DO UPDATE SET display_name = EXCLUDED.display_name
+          RETURNING id
+        `,
+        [
+          `guest:${normalizedEmail}`,
+          guestPassword,
+          studentName.trim()
+        ]
+      );
 
       let aiAnalysis = {
         summary: null,
@@ -635,6 +710,8 @@ app.post(
           INSERT INTO appointments (
             office_hour_id,
             student_id,
+            student_name,
+            student_email,
             assignment,
             problem_description,
             meeting_type,
@@ -642,7 +719,7 @@ app.post(
             ai_topic,
             ai_suggested_questions
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
           RETURNING
             id,
             status,
@@ -653,7 +730,9 @@ app.post(
         `,
         [
           numericOfficeHourId,
-          request.session.user.id,
+          guestUser.rows[0].id,
+          studentName.trim(),
+          normalizedEmail,
           assignment.trim(),
           problemDescription.trim(),
           meetingType,
@@ -662,6 +741,36 @@ app.post(
           aiSuggestedQuestions
         ]
       );
+
+      const officeHourDetails = await pool.query(
+        `
+          SELECT course_name, instructor_name, day_of_week,
+            start_time, end_time, location, meeting_mode
+          FROM office_hours
+          WHERE id = $1
+        `,
+        [numericOfficeHourId]
+      );
+
+      const bookedOfficeHour = officeHourDetails.rows[0];
+
+      sendMeetingEmail({
+        to: normalizedEmail,
+        subject: "Office-hour request received",
+        text: [
+          `Hi ${studentName.trim()},`,
+          "",
+          "Your office-hour request has been submitted for review.",
+          `Course: ${bookedOfficeHour.course_name}`,
+          `Teacher: ${bookedOfficeHour.instructor_name}`,
+          `Time: ${bookedOfficeHour.day_of_week}, ${bookedOfficeHour.start_time} - ${bookedOfficeHour.end_time}`,
+          `Location: ${bookedOfficeHour.location} / ${bookedOfficeHour.meeting_mode}`,
+          "",
+          "You will receive another email when the teacher approves or declines it."
+        ].join("\n")
+      }).catch((emailError) => {
+        console.error("Could not send booking email:", emailError.message);
+      });
 
       response.status(201).json({
         message: "Your appointment request was submitted for review.",
@@ -679,13 +788,25 @@ app.post(
 
 app.get(
   "/api/my-appointments",
-  requireRole("student"),
   async (request, response) => {
+    const studentEmail =
+      typeof request.query.email === "string"
+        ? request.query.email.trim().toLowerCase()
+        : "";
+
+    if (!/^\S+@\S+\.\S+$/.test(studentEmail)) {
+      return response.status(400).json({
+        error: "A valid email address is required."
+      });
+    }
+
     try {
       const result = await pool.query(
         `
           SELECT
             appointments.id,
+            appointments.student_name,
+            appointments.student_email,
             appointments.assignment,
             appointments.problem_description,
             appointments.meeting_type,
@@ -701,10 +822,10 @@ app.get(
           FROM appointments
           JOIN office_hours
             ON appointments.office_hour_id = office_hours.id
-          WHERE appointments.student_id = $1
+          WHERE appointments.student_email = $1
           ORDER BY appointments.created_at DESC
         `,
-        [request.session.user.id]
+        [studentEmail]
       );
 
       response.json(result.rows);
@@ -746,6 +867,8 @@ app.get(
     let query = `
       SELECT
         appointments.id,
+        appointments.student_name,
+        appointments.student_email,
         appointments.assignment,
         appointments.problem_description,
         appointments.meeting_type,
@@ -818,7 +941,9 @@ app.patch(
           WHERE appointments.id = $2
             AND appointments.office_hour_id = office_hours.id
             AND office_hours.teacher_id = $3
-          RETURNING appointments.id, appointments.status
+          RETURNING appointments.id, appointments.status,
+            appointments.student_name, appointments.student_email,
+            appointments.office_hour_id
         `,
         [
           status,
@@ -833,9 +958,47 @@ app.patch(
         });
       }
 
+      const appointment = result.rows[0];
+
+      const officeHourDetails = await pool.query(
+        `
+          SELECT course_name, instructor_name, day_of_week,
+            start_time, end_time, location, meeting_mode
+          FROM office_hours
+          WHERE id = $1
+        `,
+        [appointment.office_hour_id]
+      );
+
+      const approvedOfficeHour = officeHourDetails.rows[0];
+
+      sendMeetingEmail({
+        to: appointment.student_email,
+        subject: `Office-hour request ${status.toLowerCase()}`,
+        text: [
+          `Hi ${appointment.student_name || "there"},`,
+          "",
+          `Your office-hour request has been ${status.toLowerCase()}.`,
+          approvedOfficeHour
+            ? `Meeting: ${approvedOfficeHour.course_name} with ${approvedOfficeHour.instructor_name}`
+            : "",
+          approvedOfficeHour
+            ? `Time: ${approvedOfficeHour.day_of_week}, ${approvedOfficeHour.start_time} - ${approvedOfficeHour.end_time}`
+            : "",
+          approvedOfficeHour
+            ? `Location: ${approvedOfficeHour.location} / ${approvedOfficeHour.meeting_mode}`
+            : "",
+          status === "Approved"
+            ? "Please keep this email for your meeting details."
+            : "You can return to the scheduler to request another available time."
+        ].join("\n")
+      }).catch((emailError) => {
+        console.error("Could not send status email:", emailError.message);
+      });
+
       response.json({
         message: `Appointment request ${status.toLowerCase()}.`,
-        appointment: result.rows[0]
+        appointment
       });
     } catch (error) {
       console.error(
@@ -850,6 +1013,18 @@ app.patch(
   }
 );
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
+ensureGuestBookingColumns()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server running at http://localhost:${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error("Could not prepare booking fields:", error.message);
+    console.error(
+      "The server will still start, but database-backed features require a valid DATABASE_URL."
+    );
+    app.listen(PORT, () => {
+      console.log(`Server running at http://localhost:${PORT}`);
+    });
+  });

@@ -82,9 +82,9 @@ async function loadTeacherProfile() {
       `${officeHour.meeting_mode}`;
 
     const loginLink = document.createElement("a");
-    loginLink.href = "/login.html";
+    loginLink.href = "/student.html";
     loginLink.className = "profile-request-link";
-    loginLink.textContent = "Log In to Request";
+    loginLink.textContent = "Request an Appointment";
 
     card.append(
       title,

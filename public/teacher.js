@@ -202,6 +202,11 @@ async function loadAppointments() {
       `${appointment.course_name} with ` +
       `${appointment.instructor_name}`;
 
+    const student = document.createElement("p");
+    student.textContent =
+      `Student: ${appointment.student_name || "Guest"} ` +
+      `(${appointment.student_email || "no email"})`;
+
     const schedule = document.createElement("p");
     schedule.textContent =
       `${appointment.day_of_week}, ` +
@@ -247,6 +252,7 @@ async function loadAppointments() {
 
     card.append(
       title,
+      student,
       schedule,
       assignment,
       problem,

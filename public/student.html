@@ -17,34 +17,36 @@
       </a>
 
       <div class="student-header-actions">
-        <span id="student-welcome"></span>
-
-        <button
-          id="logout-button"
-          class="logout-button"
-          type="button"
-        >
-          Log Out
-        </button>
+        <span>Open to all students</span>
       </div>
     </header>
 
     <main class="student-container">
       <section class="student-intro">
         <p class="dashboard-label">
-          Student Portal
+          Student Booking
         </p>
 
         <h1>Find an Office Hour</h1>
 
         <p>
-          Choose an available time and submit an
-          appointment request.
+          Choose an available time, tell us how to reach you,
+          and submit an appointment request.
         </p>
       </section>
 
       <section class="student-section">
         <h2>Available Office Hours</h2>
+
+        <p class="calendar-help">
+          Select a time from the weekly availability chart or from the list below.
+        </p>
+
+        <div
+          id="availability-calendar"
+          class="availability-calendar"
+          aria-label="Weekly office-hour availability"
+        ></div>
 
         <p
           id="office-hour-message"
@@ -65,9 +67,21 @@
             class="small-button"
             type="button"
           >
-            Refresh
+            Look Up
           </button>
         </div>
+
+        <label for="lookup-email">
+          Email used for your request
+        </label>
+
+        <input
+          id="lookup-email"
+          class="lookup-email"
+          type="email"
+          autocomplete="email"
+          placeholder="you@example.com"
+        />
 
         <p
           id="appointment-status-message"
@@ -75,7 +89,7 @@
         ></p>
 
         <div id="my-appointments-list">
-          <p>Loading appointments...</p>
+          <p>Enter the email you used to request a meeting.</p>
         </div>
       </section>
     </main>
@@ -117,6 +131,30 @@
         <input
           id="office-hour-id"
           type="hidden"
+        />
+
+        <label for="student-name">
+          Your Name
+        </label>
+
+        <input
+          id="student-name"
+          type="text"
+          autocomplete="name"
+          placeholder="Example: Alex Johnson"
+          required
+        />
+
+        <label for="student-email">
+          Your Email
+        </label>
+
+        <input
+          id="student-email"
+          type="email"
+          autocomplete="email"
+          placeholder="you@example.com"
+          required
         />
 
         <label for="assignment">
