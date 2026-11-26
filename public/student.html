@@ -2,20 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0"
-    />
-    <title>Student Dashboard - Office Hour Scheduler</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Student Booking - Office Hour Scheduler</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
 
   <body class="student-page">
     <header class="student-header">
-      <a href="/" class="student-brand">
-        Office Hour Scheduler
-      </a>
-
+      <a href="/" class="student-brand">Office Hour Scheduler</a>
       <div class="student-header-actions">
         <span>Open to all students</span>
       </div>
@@ -23,84 +17,43 @@
 
     <main class="student-container">
       <section class="student-intro">
-        <p class="dashboard-label">
-          Student Booking
-        </p>
-
+        <p class="dashboard-label">Student Booking</p>
         <h1>Find an Office Hour</h1>
-
         <p>
-          Choose an available time, tell us how to reach you,
-          and submit an appointment request.
+          Choose a date and time, describe what you need help with,
+          and receive a secure email link to manage your request.
         </p>
       </section>
 
       <section class="student-section">
-        <h2>Available Office Hours</h2>
-
+        <h2>Availability</h2>
         <p class="calendar-help">
-          Select a time from the weekly availability chart or from the list below.
+          Choose a time from the upcoming availability chart or the list below.
         </p>
-
         <div
           id="availability-calendar"
           class="availability-calendar"
-          aria-label="Weekly office-hour availability"
+          aria-label="Upcoming office-hour availability"
         ></div>
-
-        <p
-          id="office-hour-message"
-          class="student-message"
-        ></p>
-
+        <p id="office-hour-message" class="student-message"></p>
         <div id="office-hour-list">
           <p>Loading office hours...</p>
         </div>
+        <p id="booking-status-message" class="student-message" aria-live="polite"></p>
       </section>
 
       <section class="student-section">
-        <div class="section-heading">
-          <h2>My Appointments</h2>
-
-          <button
-            id="refresh-my-appointments"
-            class="small-button"
-            type="button"
-          >
-            Look Up
-          </button>
-        </div>
-
-        <label for="lookup-email">
-          Email used for your request
-        </label>
-
-        <input
-          id="lookup-email"
-          class="lookup-email"
-          type="email"
-          autocomplete="email"
-          placeholder="you@example.com"
-        />
-
-        <p
-          id="appointment-status-message"
-          class="student-message"
-        ></p>
-
-        <div id="my-appointments-list">
-          <p>Enter the email you used to request a meeting.</p>
-        </div>
+        <h2>Manage an Existing Request</h2>
+        <p>
+          Use the secure management link from your appointment email to view,
+          cancel, or reschedule a request.
+        </p>
       </section>
     </main>
 
-    <dialog
-      id="appointment-dialog"
-      class="appointment-dialog"
-    >
+    <dialog id="appointment-dialog" class="appointment-dialog">
       <div class="dialog-heading">
         <h2>Request an Appointment</h2>
-
         <button
           id="close-appointment-dialog"
           class="close-dialog-button"
@@ -110,71 +63,59 @@
         </button>
       </div>
 
-      <div
-        id="selected-office-hour"
-        class="selected-office-hour"
-      >
+      <div id="selected-office-hour" class="selected-office-hour">
         <strong id="selected-course-teacher"></strong>
-
-        <span
-          id="selected-time"
-          class="selected-office-detail"
-        ></span>
-
-        <span
-          id="selected-location"
-          class="selected-office-detail"
-        ></span>
+        <span id="selected-time" class="selected-office-detail"></span>
+        <span id="selected-location" class="selected-office-detail"></span>
       </div>
 
       <form id="appointment-form">
+        <input id="office-hour-id" type="hidden" />
+        <input id="scheduled-date" type="hidden" />
         <input
-          id="office-hour-id"
-          type="hidden"
+          id="website"
+          name="website"
+          type="text"
+          tabindex="-1"
+          autocomplete="off"
+          class="honeypot-field"
+          aria-hidden="true"
         />
 
-        <label for="student-name">
-          Your Name
-        </label>
-
+        <label for="student-name">Your Name</label>
         <input
           id="student-name"
           type="text"
           autocomplete="name"
+          maxlength="100"
           placeholder="Example: Alex Johnson"
           required
         />
 
-        <label for="student-email">
-          Your Email
-        </label>
-
+        <label for="student-email">Your Email</label>
         <input
           id="student-email"
           type="email"
           autocomplete="email"
+          maxlength="254"
           placeholder="you@example.com"
           required
         />
 
-        <label for="assignment">
-          Assignment
-        </label>
-
+        <label for="assignment">Assignment or Topic</label>
         <input
           id="assignment"
           type="text"
+          maxlength="200"
           placeholder="Example: Homework 3"
           required
         />
 
-        <label for="problem-description">
-          What do you need help with?
-        </label>
-
+        <label for="problem-description">What do you need help with?</label>
         <textarea
           id="problem-description"
           rows="5"
+          maxlength="5000"
           placeholder="Describe the question or problem you are having."
           required
         ></textarea>
@@ -187,76 +128,54 @@
           >
             Improve My Question with AI
           </button>
-
-          <p
-            id="ai-question-message"
-            class="student-message"
-            aria-live="polite"
-          ></p>
-
-          <div
-            id="question-improvement"
-            class="question-improvement"
-            hidden
-          >
+          <p id="ai-question-message" class="student-message" aria-live="polite"></p>
+          <div id="question-improvement" class="question-improvement" hidden>
             <h3>Suggested Better Question</h3>
-
-            <p
-              id="improved-question-text"
-              class="improved-question-text"
-            ></p>
-
-            <p
-              id="improvement-reason"
-              class="improvement-reason"
-            ></p>
-
-            <p>
-              Would you like to use this improved
-              version?
-            </p>
-
+            <p id="improved-question-text" class="improved-question-text"></p>
+            <p id="improvement-reason" class="improvement-reason"></p>
+            <p>Would you like to use this improved version?</p>
             <div class="ai-question-actions">
-              <button
-                id="use-improved-question"
-                type="button"
-              >
+              <button id="use-improved-question" type="button">
                 Use Improved Question
               </button>
-
-              <button
-                id="keep-original-question"
-                class="ai-keep-button"
-                type="button"
-              >
+              <button id="keep-original-question" class="ai-keep-button" type="button">
                 Keep Original
               </button>
             </div>
           </div>
         </div>
 
-        <label for="meeting-type">
-          Meeting Type
-        </label>
-
+        <label for="meeting-type">Meeting Type</label>
         <select id="meeting-type" required>
-          <option value="">
-            Select a meeting type
-          </option>
-
-          <option value="In-person">
-            In-person
-          </option>
-
-          <option value="Zoom">
-            Zoom
-          </option>
+          <option value="">Select a meeting type</option>
+          <option value="In-person">In-person</option>
+          <option value="Zoom">Zoom</option>
         </select>
 
-        <button type="submit">
-          Submit Appointment Request
-        </button>
+        <label for="preferred-language">Language Support for the Meeting (optional)</label>
+        <select id="preferred-language">
+          <option value="">No preference</option>
+          <option value="Spanish">Spanish</option>
+          <option value="Mandarin">Mandarin</option>
+          <option value="Arabic">Arabic</option>
+          <option value="French">French</option>
+          <option value="Other">Other - mention it in your question</option>
+        </select>
 
+        <div class="participant-section">
+          <div class="section-heading">
+            <h3>Additional Participants</h3>
+            <button id="add-participant" class="small-button" type="button">
+              Add Participant
+            </button>
+          </div>
+          <p class="form-help">
+            Invite assistant staff or other students. Invitations are sent after approval.
+          </p>
+          <div id="participant-list"></div>
+        </div>
+
+        <button type="submit">Submit Appointment Request</button>
         <p id="form-message"></p>
       </form>
     </dialog>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Manage Appointment - Office Hour Scheduler</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+
+  <body class="student-page">
+    <header class="student-header">
+      <a href="/" class="student-brand">Office Hour Scheduler</a>
+      <span class="student-header-actions">Secure appointment link</span>
+    </header>
+
+    <main class="student-container">
+      <section class="student-intro">
+        <p class="dashboard-label">Appointment Management</p>
+        <h1 id="manage-title">Loading appointment...</h1>
+        <p id="manage-message" class="student-message" aria-live="polite"></p>
+      </section>
+
+      <section id="appointment-details" class="student-section" hidden>
+        <div id="appointment-summary"></div>
+        <div id="appointment-participants"></div>
+        <div id="manage-actions" class="manage-actions">
+          <button id="cancel-appointment" class="decline-button" type="button">
+            Cancel Appointment
+          </button>
+        </div>
+      </section>
+
+      <section id="reschedule-section" class="student-section" hidden>
+        <h2>Request a Different Time</h2>
+        <label for="reschedule-office-hour">Available office hour</label>
+        <select id="reschedule-office-hour"></select>
+        <label for="reschedule-date">Date</label>
+        <input id="reschedule-date" type="date" />
+        <button id="submit-reschedule" type="button">
+          Request Reschedule
+        </button>
+      </section>
+    </main>
+
+    <script src="/manage.js"></script>
+  </body>
+</html>

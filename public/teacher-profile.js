@@ -29,6 +29,21 @@ function formatTime(timeValue) {
   )} ${suffix}`;
 }
 
+function formatDate(dateValue) {
+  if (!dateValue) {
+    return "Weekly";
+  }
+
+  return new Date(String(dateValue).slice(0, 10) + "T12:00:00Z")
+    .toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC"
+    });
+}
+
 async function loadTeacherProfile() {
   const pathParts = window.location.pathname
     .split("/")
@@ -72,7 +87,7 @@ async function loadTeacherProfile() {
 
     const time = document.createElement("p");
     time.textContent =
-      `${officeHour.day_of_week}, ` +
+      `${formatDate(officeHour.specific_date)}, ` +
       `${formatTime(officeHour.start_time)} - ` +
       `${formatTime(officeHour.end_time)}`;
 

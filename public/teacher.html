@@ -9,10 +9,7 @@
 
   <body class="dashboard-page">
     <header class="dashboard-header">
-      <a href="/" class="dashboard-brand">
-        Office Hour Scheduler
-      </a>
-
+      <a href="/" class="dashboard-brand">Office Hour Scheduler</a>
       <button id="logout-button" class="logout-button" type="button">
         Log Out
       </button>
@@ -22,10 +19,7 @@
       <section class="dashboard-intro">
         <p class="dashboard-label">Teacher Dashboard</p>
         <h1 id="teacher-welcome">Welcome</h1>
-        <p>
-          Manage your office hours and student appointment requests.
-        </p>
-
+        <p>Manage availability, impromptu meetings, and student requests.</p>
         <button id="open-office-hour-dialog" type="button">
           Create Office Hour
         </button>
@@ -33,13 +27,11 @@
 
       <section class="dashboard-card">
         <div class="section-heading">
-          <h2>Current Office Hours</h2>
-
+          <h2>Office Hours</h2>
           <button id="refresh-office-hours" class="small-button" type="button">
             Refresh
           </button>
         </div>
-
         <div id="office-hour-list">
           <p>Loading office hours...</p>
         </div>
@@ -47,13 +39,25 @@
 
       <section class="dashboard-card">
         <div class="section-heading">
-          <h2>Pending Appointment Requests</h2>
+          <h2>Appointment Requests</h2>
+          <select id="appointment-filter" class="small-select">
+            <option value="Pending">Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="Declined">Declined</option>
+            <option value="Cancelled">Cancelled</option>
+            <option value="All">All</option>
+          </select>
         </div>
-
         <p id="teacher-message" class="dashboard-message"></p>
-
         <div id="appointment-list">
           <p>Loading appointments...</p>
+        </div>
+      </section>
+
+      <section class="dashboard-card">
+        <h2>Approved Meeting Calendar</h2>
+        <div id="teacher-calendar">
+          <p>Loading approved meetings...</p>
         </div>
       </section>
     </main>
@@ -61,8 +65,7 @@
     <dialog id="office-hour-dialog" class="office-hour-dialog">
       <form id="office-hour-form">
         <div class="dialog-heading">
-          <h2>Create Office Hour</h2>
-
+          <h2 id="office-hour-dialog-title">Create Office Hour</h2>
           <button
             id="close-office-hour-dialog"
             class="close-dialog-button"
@@ -72,15 +75,18 @@
           </button>
         </div>
 
-        <label for="course-name">Course Name</label>
-        <input
-          id="course-name"
-          type="text"
-          placeholder="CS4800"
-          required
-        />
+        <input id="office-hour-id" type="hidden" />
 
-        <label for="day-of-week">Day</label>
+        <label for="course-name">Course Name</label>
+        <input id="course-name" type="text" maxlength="120" placeholder="CS4800" required />
+
+        <label for="schedule-type">Schedule Type</label>
+        <select id="schedule-type" required>
+          <option value="recurring">Weekly recurring</option>
+          <option value="one-time">One-time / impromptu</option>
+        </select>
+
+        <label for="day-of-week" id="day-label">Day</label>
         <select id="day-of-week" required>
           <option value="">Select a day</option>
           <option value="Monday">Monday</option>
@@ -89,6 +95,9 @@
           <option value="Thursday">Thursday</option>
           <option value="Friday">Friday</option>
         </select>
+
+        <label for="specific-date" id="date-label" hidden>Date</label>
+        <input id="specific-date" type="date" hidden />
 
         <label for="start-time">Start Time</label>
         <input id="start-time" type="time" required />
@@ -100,8 +109,16 @@
         <input
           id="location"
           type="text"
+          maxlength="200"
           placeholder="Building 9, Room 201 or Zoom"
           required
+        />
+
+        <label for="meeting-link">Meeting Link (optional)</label>
+        <input
+          id="meeting-link"
+          type="url"
+          placeholder="https://zoom.us/..."
         />
 
         <label for="meeting-mode">Meeting Mode</label>
@@ -112,8 +129,19 @@
           <option value="Both">In-person and Zoom</option>
         </select>
 
-        <button type="submit">Create Office Hour</button>
+        <label for="capacity">Maximum Participants</label>
+        <input id="capacity" type="number" min="1" max="100" value="1" required />
 
+        <label for="time-zone">Time Zone</label>
+        <select id="time-zone" required>
+          <option value="America/Los_Angeles">Pacific Time</option>
+          <option value="America/Denver">Mountain Time</option>
+          <option value="America/Chicago">Central Time</option>
+          <option value="America/New_York">Eastern Time</option>
+          <option value="UTC">UTC</option>
+        </select>
+
+        <button type="submit">Save Office Hour</button>
         <p id="office-hour-form-message"></p>
       </form>
     </dialog>
