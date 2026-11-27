@@ -170,7 +170,7 @@ async function sendMeetingEmail({
     const calendarInvite = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
-      "PRODID:-//Office Hour Scheduler//EN",
+      "PRODID:-//instoffice//EN",
       "METHOD:PUBLISH",
       "BEGIN:VEVENT",
       "UID:appointment-" + appointment.id + "@office-hour-scheduler",

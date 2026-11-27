@@ -1919,3 +1919,171 @@ a:focus-visible {
     gap: 10px;
   }
 }
+
+.site-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #ffffff;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+
+.dashboard-header,
+.student-header,
+.profile-header,
+.concept-header {
+  min-height: 74px;
+  padding: 16px clamp(24px, 7vw, 92px);
+  color: #ffffff;
+  background: linear-gradient(115deg, #352c70 0%, var(--canvas-primary) 100%);
+  border-bottom: 1px solid rgb(255 255 255 / 18%);
+  box-shadow: 0 8px 25px rgb(37 35 67 / 16%);
+}
+
+.site-brand .site-logo {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  filter: invert(1);
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  color: var(--canvas-ink);
+  font-size: 1.65rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.login-brand .site-logo {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+}
+
+/* Shared action styling keeps important controls consistent across the app. */
+button,
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 11px 18px;
+  margin: 0;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: #ffffff;
+  background-color: var(--canvas-primary);
+  box-shadow: 0 4px 10px rgb(81 70 165 / 18%);
+  font-size: 0.95rem;
+  font-weight: 750;
+  line-height: 1.1;
+  transition: transform 160ms ease, background-color 160ms ease,
+    box-shadow 160ms ease, border-color 160ms ease;
+}
+
+button:hover,
+.button:hover {
+  background-color: var(--canvas-primary-hover);
+  box-shadow: 0 8px 18px rgb(81 70 165 / 22%);
+  transform: translateY(-1px);
+}
+
+button:active,
+.button:active {
+  box-shadow: 0 3px 8px rgb(81 70 165 / 18%);
+  transform: translateY(0);
+}
+
+button:disabled,
+.button[aria-disabled="true"] {
+  opacity: 0.62;
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.small-button {
+  min-height: 36px;
+  padding: 8px 13px;
+  border-radius: 10px;
+  font-size: 0.86rem;
+}
+
+.student-header-actions .button,
+.dashboard-header-actions .button,
+.student-header > .button,
+.logout-button {
+  color: var(--canvas-topbar);
+  background-color: #ffffff;
+  border-color: rgb(255 255 255 / 72%);
+  box-shadow: 0 4px 12px rgb(37 35 67 / 18%);
+}
+
+.student-header-actions .button:hover,
+.dashboard-header-actions .button:hover,
+.student-header > .button:hover,
+.logout-button:hover {
+  color: #ffffff;
+  background-color: var(--canvas-primary-hover);
+  border-color: var(--canvas-primary-hover);
+}
+
+.profile-login-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 8px 14px;
+  border: 1px solid rgb(255 255 255 / 72%);
+  border-radius: 10px;
+  color: #ffffff;
+  background: rgb(255 255 255 / 10%);
+  box-shadow: 0 4px 10px rgb(37 35 67 / 12%);
+  transition: transform 160ms ease, background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.profile-login-link:hover {
+  color: var(--canvas-topbar);
+  background: #ffffff;
+  box-shadow: 0 8px 16px rgb(37 35 67 / 18%);
+  transform: translateY(-1px);
+}
+
+.decline-button {
+  color: #ffffff;
+  background-color: var(--canvas-danger);
+  box-shadow: 0 4px 10px rgb(180 74 84 / 18%);
+}
+
+.decline-button:hover {
+  background-color: #963d49;
+  box-shadow: 0 8px 18px rgb(180 74 84 / 22%);
+}
+
+.calendar-nav-button,
+.calendar-today-button {
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid var(--canvas-line);
+  color: var(--canvas-primary);
+  background-color: var(--canvas-surface);
+  box-shadow: none;
+}
+
+.calendar-nav-button:hover,
+.calendar-today-button:hover {
+  color: #ffffff;
+  background-color: var(--canvas-primary);
+  border-color: var(--canvas-primary);
+  box-shadow: 0 5px 12px rgb(81 70 165 / 16%);
+}
