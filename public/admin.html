@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard - Office Hour Scheduler</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body class="dashboard-page admin-page">
+    <header class="dashboard-header">
+      <a href="/" class="dashboard-brand">Office Hour Scheduler</a>
+      <button id="admin-logout-button" class="logout-button" type="button">
+        Log Out
+      </button>
+    </header>
+
+    <main class="dashboard-container">
+      <section class="dashboard-intro">
+        <p class="dashboard-label">Admin Dashboard</p>
+        <h1 id="admin-welcome">Scheduler Overview</h1>
+        <p>
+          Review user feedback and keep an eye on activity across the scheduler.
+        </p>
+      </section>
+
+      <section class="admin-stats-grid" aria-label="Scheduler totals">
+        <article class="admin-stat-card">
+          <p class="dashboard-label">Teachers</p>
+          <strong id="stat-teachers" class="admin-stat-value">—</strong>
+        </article>
+        <article class="admin-stat-card">
+          <p class="dashboard-label">Students</p>
+          <strong id="stat-students" class="admin-stat-value">—</strong>
+        </article>
+        <article class="admin-stat-card">
+          <p class="dashboard-label">Appointments</p>
+          <strong id="stat-appointments" class="admin-stat-value">—</strong>
+        </article>
+        <article class="admin-stat-card">
+          <p class="dashboard-label">New Feedback</p>
+          <strong id="stat-new-feedback" class="admin-stat-value">—</strong>
+        </article>
+      </section>
+
+      <p id="admin-message" class="admin-message" role="status"></p>
+
+      <div class="admin-layout">
+        <section class="dashboard-card">
+          <div class="section-heading">
+            <div>
+              <p class="dashboard-label">User Voice</p>
+              <h2>Feedback</h2>
+            </div>
+            <label class="admin-filter-label" for="feedback-filter">
+              Show
+              <select id="feedback-filter" class="small-select">
+                <option value="All">All</option>
+                <option value="New">New</option>
+                <option value="Read">Read</option>
+                <option value="Archived">Archived</option>
+              </select>
+            </label>
+          </div>
+          <div id="feedback-list" class="admin-feedback-list">
+            <p class="muted-text">Loading feedback...</p>
+          </div>
+        </section>
+
+        <aside class="admin-sidebar">
+          <section class="dashboard-card">
+            <p class="dashboard-label">Staff</p>
+            <h2>Teachers</h2>
+            <div id="admin-teacher-list" class="admin-list">
+              <p class="muted-text">Loading teachers...</p>
+            </div>
+          </section>
+
+          <section class="dashboard-card">
+            <p class="dashboard-label">Activity</p>
+            <h2>Recent Appointments</h2>
+            <div id="recent-appointments" class="admin-list">
+              <p class="muted-text">Loading appointments...</p>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </main>
+
+    <script src="admin.js"></script>
+  </body>
+</html>

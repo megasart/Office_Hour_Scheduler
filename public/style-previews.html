@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Office Hour Scheduler — Style Lab</title>
+    <link rel="stylesheet" href="/style-previews.css" />
+  </head>
+
+  <body class="style-lab-page">
+    <header class="lab-header">
+      <div>
+        <p class="lab-eyebrow">Office Hour Scheduler · Style Lab</p>
+        <h1>Three directions for the final interface</h1>
+        <p class="lab-subtitle">
+          These are visual previews only. The current application and its behavior
+          have not been changed.
+        </p>
+      </div>
+      <a class="back-to-app" href="/">Back to application</a>
+    </header>
+
+    <main class="lab-main">
+      <nav class="version-nav" aria-label="Style versions">
+        <a href="#canvas-clean"><span>01</span> Canvas Clean</a>
+        <a href="#google-material"><span>02</span> Workspace Material</a>
+        <a href="#study-grid"><span>03</span> StudyGrid</a>
+      </nav>
+
+      <section id="canvas-clean" class="style-version">
+        <div class="version-heading">
+          <div>
+            <p class="version-number">Version 01</p>
+            <h2>Canvas Clean</h2>
+            <p>
+              Academic, organized, and familiar. A calm indigo rail keeps the
+              important actions easy to find while the calendar stays central.
+            </p>
+          </div>
+          <div class="palette" aria-label="Canvas Clean color palette">
+            <span class="swatch swatch-indigo"></span>
+            <span class="swatch swatch-lavender"></span>
+            <span class="swatch swatch-coral"></span>
+            <span class="palette-label">Indigo · Lavender · Coral</span>
+          </div>
+        </div>
+
+        <div class="mock-window theme-canvas">
+          <div class="mock-topbar">
+            <div class="mock-brand"><span class="brand-mark">O</span> Office Hour Scheduler</div>
+            <div class="mock-topbar-actions"><span>Help</span><span class="avatar">AJ</span></div>
+          </div>
+          <div class="mock-layout">
+            <aside class="mock-rail">
+              <p class="rail-label">Workspace</p>
+              <a class="rail-item active" href="#canvas-clean"><span>▦</span> Calendar</a>
+              <a class="rail-item" href="#canvas-clean"><span>＋</span> New request</a>
+              <a class="rail-item" href="#canvas-clean"><span>◷</span> My meetings</a>
+              <div class="rail-spacer"></div>
+              <a class="rail-item" href="#canvas-clean"><span>⚙</span> Settings</a>
+            </aside>
+            <div class="mock-content">
+              <div class="mock-breadcrumb">Student booking <span>/</span> Find a teacher</div>
+              <div class="mock-title-row">
+                <div>
+                  <p class="mock-kicker">Selected teacher</p>
+                  <h3>Dr. Taylor</h3>
+                  <p class="muted-text">CS4800 · CS4680 · Pacific Time</p>
+                </div>
+                <button class="mock-secondary-button" type="button">Change teacher</button>
+              </div>
+              <div class="mock-search-row">
+                <div class="mock-search"><span>⌕</span><span class="search-text">Teacher code or profile link</span><strong>taylor</strong></div>
+                <button class="mock-primary-button" type="button">Find teacher</button>
+              </div>
+              <div class="mock-workspace-grid">
+                <section class="mock-card calendar-card">
+                  <div class="card-title-row"><div><p class="mock-kicker">Availability</p><h4>November 2026</h4></div><div class="calendar-controls"><button type="button">‹</button><button type="button">›</button><button type="button">Today</button></div></div>
+                  <div class="mock-weekdays"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+                  <div class="mock-calendar">
+                    <span class="day muted">1</span><span class="day">2</span><span class="day">3</span><span class="day">4</span><span class="day">5</span><span class="day">6</span><span class="day">7</span>
+                    <span class="day">8</span><span class="day">9</span><span class="day">10</span><span class="day">11</span><span class="day">12</span><span class="day">13</span><span class="day">14</span>
+                    <span class="day">15</span><span class="day">16</span><span class="day">17</span><span class="day">18</span><span class="day">19</span><span class="day">20</span><span class="day">21</span>
+                    <span class="day">22</span><span class="day">23</span><span class="day">24</span><span class="day">25</span><span class="day today">26<button class="mock-event" type="button">1:51 PM<br /><small>CS4680</small></button></span><span class="day">27<button class="mock-event" type="button">10:30 AM<br /><small>CS4680</small></button></span><span class="day">28</span>
+                    <span class="day">29</span><span class="day">30<button class="mock-event" type="button">3:00 PM<br /><small>CS4800</small></button></span><span class="day muted"></span><span class="day muted"></span><span class="day muted"></span><span class="day muted"></span><span class="day muted"></span>
+                  </div>
+                </section>
+                <aside class="mock-card request-card">
+                  <p class="mock-kicker">Selected time</p>
+                  <h4>Thu, Nov 26</h4>
+                  <p class="large-time">1:51 PM — 2:51 PM</p>
+                  <div class="detail-line"><span>Course</span><strong>CS4680</strong></div>
+                  <div class="detail-line"><span>Location</span><strong>Here · In-person</strong></div>
+                  <div class="detail-line"><span>Capacity</span><strong>1 seat available</strong></div>
+                  <button class="mock-primary-button full-width" type="button">Request appointment</button>
+                  <p class="tiny-note">No account required. A secure email link manages the request.</p>
+                </aside>
+              </div>
+              <div class="mock-dashboard-row">
+                <div class="mock-card mini-card"><div class="mini-card-heading"><h4>Upcoming meetings</h4><span class="status-pill green">2 approved</span></div><p><strong>Tomorrow · 10:30 AM</strong><br />CS4680 with Dr. Taylor</p><p><strong>Mon · 3:00 PM</strong><br />CS4800 with Dr. Taylor</p></div>
+                <div class="mock-card mini-card"><div class="mini-card-heading"><h4>Appointment requests</h4><span class="status-pill amber">3 pending</span></div><p class="request-row"><span class="dot amber-dot"></span> Alex Johnson <span class="request-time">Today, 1:51 PM</span></p><p class="request-row"><span class="dot blue-dot"></span> Morgan Lee <span class="request-time">Fri, 10:30 AM</span></p></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="google-material" class="style-version">
+        <div class="version-heading">
+          <div>
+            <p class="version-number">Version 02</p>
+            <h2>Workspace Material</h2>
+            <p>
+              Bright and approachable with Google-like surfaces, compact tools,
+              and colored status cues that make the workflow feel lightweight.
+            </p>
+          </div>
+          <div class="palette" aria-label="Workspace Material color palette">
+            <span class="swatch swatch-blue"></span>
+            <span class="swatch swatch-green"></span>
+            <span class="swatch swatch-yellow"></span>
+            <span class="palette-label">Blue · Green · Yellow</span>
+          </div>
+        </div>
+
+        <div class="mock-window theme-google">
+          <div class="mock-topbar">
+            <div class="mock-brand"><span class="google-mark"><i></i><i></i><i></i><i></i></span> Office Hour Scheduler</div>
+            <div class="workspace-search"><span>⌕</span> Search teachers, courses, or meetings</div>
+            <div class="mock-topbar-actions"><span class="help-circle">?</span><span class="avatar">AJ</span></div>
+          </div>
+          <div class="mock-google-content">
+            <div class="mock-title-row">
+              <div><p class="mock-kicker">Office hour workspace</p><h3>Find your next conversation</h3><p class="muted-text">Start with a teacher, then choose an open time.</p></div>
+              <button class="mock-outline-button" type="button">View my requests</button>
+            </div>
+            <div class="mock-search-row google-search-row">
+              <div class="mock-search"><span>⌕</span><span class="search-text">Teacher code or profile link</span><strong>taylor</strong></div>
+              <button class="mock-primary-button" type="button">Find teacher</button>
+            </div>
+            <div class="teacher-banner"><span class="teacher-avatar">DT</span><div><p class="mock-kicker">Teacher calendar</p><h4>Dr. Taylor</h4><p class="muted-text">CS4800 · CS4680 · Pacific Time</p></div><span class="verified-badge">✓ Verified profile</span></div>
+            <div class="mock-workspace-grid">
+              <section class="mock-card calendar-card">
+                <div class="card-title-row"><div><p class="mock-kicker">Open times</p><h4>November 2026</h4></div><div class="calendar-controls"><button type="button">‹</button><button type="button">›</button><button type="button">Today</button></div></div>
+                <div class="mock-weekdays"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+                <div class="mock-calendar">
+                  <span class="day muted">1</span><span class="day">2</span><span class="day">3</span><span class="day">4</span><span class="day">5</span><span class="day">6</span><span class="day">7</span>
+                  <span class="day">8</span><span class="day">9</span><span class="day">10</span><span class="day">11</span><span class="day">12</span><span class="day">13</span><span class="day">14</span>
+                  <span class="day">15</span><span class="day">16</span><span class="day">17</span><span class="day">18</span><span class="day">19</span><span class="day">20</span><span class="day">21</span>
+                  <span class="day">22</span><span class="day">23</span><span class="day">24</span><span class="day">25</span><span class="day today">26<button class="mock-event" type="button">1:51 PM<br /><small>CS4680</small></button></span><span class="day">27<button class="mock-event" type="button">10:30 AM<br /><small>CS4680</small></button></span><span class="day">28</span>
+                  <span class="day">29</span><span class="day">30<button class="mock-event" type="button">3:00 PM<br /><small>CS4800</small></button></span><span class="day muted"></span><span class="day muted"></span><span class="day muted"></span><span class="day muted"></span><span class="day muted"></span>
+                </div>
+              </section>
+              <aside class="mock-card request-card">
+                <div class="request-card-icon">✓</div><p class="mock-kicker">Ready to request?</p><h4>Thu, Nov 26</h4><p class="large-time">1:51 PM — 2:51 PM</p>
+                <div class="detail-line"><span>Meeting mode</span><strong>In-person</strong></div><div class="detail-line"><span>Location</span><strong>Here</strong></div>
+                <button class="mock-primary-button full-width" type="button">Continue</button><p class="tiny-note">You will add your question and email next.</p>
+              </aside>
+            </div>
+            <div class="mock-dashboard-row"><div class="mock-card mini-card"><div class="mini-card-heading"><h4>Upcoming meetings</h4><button class="text-button" type="button">See all</button></div><p class="meeting-line"><span class="calendar-dot blue-dot"></span><strong>Tomorrow, 10:30 AM</strong><span>CS4680</span></p><p class="meeting-line"><span class="calendar-dot green-dot"></span><strong>Mon, 3:00 PM</strong><span>CS4800</span></p></div><div class="mock-card mini-card tips-card"><h4>Before your meeting</h4><p>Bring the assignment, your attempt, and one focused question.</p><span class="tip-link">Question preparation →</span></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="study-grid" class="style-version">
+        <div class="version-heading">
+          <div>
+            <p class="version-number">Version 03</p>
+            <h2>StudyGrid</h2>
+            <p>
+              A more distinctive direction: dark academic surfaces, a visible
+              time-grid motif, and warm coral accents that make actions feel clear.
+            </p>
+          </div>
+          <div class="palette" aria-label="StudyGrid color palette">
+            <span class="swatch swatch-ink"></span>
+            <span class="swatch swatch-teal"></span>
+            <span class="swatch swatch-orange"></span>
+            <span class="palette-label">Ink · Teal · Coral</span>
+          </div>
+        </div>
+
+        <div class="mock-window theme-grid">
+          <div class="mock-topbar"><div class="mock-brand"><span class="grid-mark">✦</span> Office Hour Scheduler</div><div class="mock-topbar-actions"><span class="live-indicator"><i></i> Live availability</span><span class="avatar">AJ</span></div></div>
+          <div class="mock-layout">
+            <aside class="mock-rail"><p class="rail-label">Your hub</p><a class="rail-item active" href="#study-grid"><span>▦</span> Time grid</a><a class="rail-item" href="#study-grid"><span>↗</span> Requests</a><a class="rail-item" href="#study-grid"><span>◉</span> Teachers</a><div class="rail-spacer"></div><div class="rail-status"><span class="live-dot"></span><strong>System ready</strong><small>Email links enabled</small></div></aside>
+            <div class="mock-content"><div class="mock-breadcrumb">Student hub <span>/</span> Teacher calendar</div><div class="mock-title-row"><div><p class="mock-kicker">Your next step</p><h3>Choose a time that works</h3><p class="muted-text">A focused calendar for real conversations, not another account to manage.</p></div><button class="mock-coral-button" type="button">Open request</button></div><div class="teacher-banner"><span class="teacher-avatar">DT</span><div><p class="mock-kicker">You are viewing</p><h4>Dr. Taylor</h4><p class="muted-text">CS4800 · CS4680 · Here, Zoom, and Building 9</p></div><span class="code-chip">taylor</span></div>
+              <div class="mock-workspace-grid"><section class="mock-card calendar-card"><div class="card-title-row"><div><p class="mock-kicker">Live time grid</p><h4>November 2026</h4></div><div class="calendar-controls"><button type="button">‹</button><button type="button">›</button><button type="button">Today</button></div></div><div class="mock-weekdays"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div><div class="mock-calendar"><span class="day muted">1</span><span class="day">2</span><span class="day">3</span><span class="day">4</span><span class="day">5</span><span class="day">6</span><span class="day">7</span><span class="day">8</span><span class="day">9</span><span class="day">10</span><span class="day">11</span><span class="day">12</span><span class="day">13</span><span class="day">14</span><span class="day">15</span><span class="day">16</span><span class="day">17</span><span class="day">18</span><span class="day">19</span><span class="day">20</span><span class="day">21</span><span class="day">22</span><span class="day">23</span><span class="day">24</span><span class="day">25</span><span class="day today">26<button class="mock-event" type="button">1:51 PM<br /><small>CS4680</small></button></span><span class="day">27<button class="mock-event" type="button">10:30 AM<br /><small>CS4680</small></button></span><span class="day">28</span><span class="day">29</span><span class="day">30<button class="mock-event" type="button">3:00 PM<br /><small>CS4800</small></button></span><span class="day muted"></span><span class="day muted"></span><span class="day muted"></span><span class="day muted"></span><span class="day muted"></span></div></section><aside class="mock-card request-card coral-request"><span class="coral-label">Selected slot</span><h4>Thu, Nov 26</h4><p class="large-time">1:51 PM — 2:51 PM</p><div class="detail-line"><span>Course</span><strong>CS4680</strong></div><div class="detail-line"><span>Format</span><strong>In-person</strong></div><div class="detail-line"><span>What happens next?</span><strong>Email link</strong></div><button class="mock-coral-button full-width" type="button">Start request</button><p class="tiny-note">No student account. Just your email and question.</p></aside></div>
+              <div class="mock-dashboard-row"><div class="mock-card mini-card dark-mini"><div class="mini-card-heading"><h4>Upcoming meetings</h4><span class="status-pill teal-pill">2 approved</span></div><p><strong>Tomorrow · 10:30 AM</strong><br /><span class="accent-text">CS4680</span> with Dr. Taylor</p><p><strong>Mon · 3:00 PM</strong><br /><span class="accent-text">CS4800</span> with Dr. Taylor</p></div><div class="mock-card mini-card dark-mini"><div class="mini-card-heading"><h4>Meeting prep</h4><span class="prep-icon">✦</span></div><p>AI can help turn a rough question into a focused conversation starter.</p><button class="text-button" type="button">Improve my question →</button></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

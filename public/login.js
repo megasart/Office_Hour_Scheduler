@@ -27,7 +27,9 @@ loginForm.addEventListener("submit", async (event) => {
       throw new Error(data.error || "Login failed.");
     }
 
-    if (data.user.role === "teacher") {
+    if (data.user.role === "admin") {
+      window.location.href = "/admin.html";
+    } else if (data.user.role === "teacher") {
       window.location.href = "/teacher.html";
     } else {
       window.location.href = "/student.html";

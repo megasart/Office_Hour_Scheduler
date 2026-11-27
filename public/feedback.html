@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Share Feedback - Office Hour Scheduler</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body class="student-page feedback-page">
+    <header class="student-header">
+      <a href="/" class="student-brand">Office Hour Scheduler</a>
+      <button id="return-button" class="button small-button" type="button">
+        Return
+      </button>
+    </header>
+
+    <main class="student-container">
+      <section class="student-intro">
+        <p class="dashboard-label">Quick Feedback</p>
+        <h1>How is Office Hour Scheduler working?</h1>
+        <p>
+          A short note helps us improve the booking experience for everyone.
+        </p>
+
+        <form id="feedback-form" class="feedback-form" novalidate>
+          <label for="feedback-category">Feedback type</label>
+          <select id="feedback-category" required>
+            <option value="General">General</option>
+            <option value="Booking experience">Booking experience</option>
+            <option value="Teacher experience">Teacher experience</option>
+            <option value="Bug report">Bug report</option>
+          </select>
+
+          <label for="feedback-rating">Rating</label>
+          <select id="feedback-rating" required>
+            <option value="">Choose a rating</option>
+            <option value="5">5 — Excellent</option>
+            <option value="4">4 — Good</option>
+            <option value="3">3 — Okay</option>
+            <option value="2">2 — Needs improvement</option>
+            <option value="1">1 — Poor</option>
+          </select>
+
+          <label for="feedback-name">Name (optional)</label>
+          <input
+            id="feedback-name"
+            type="text"
+            maxlength="100"
+            autocomplete="name"
+            placeholder="Your name"
+          />
+
+          <label for="feedback-message">Your feedback</label>
+          <textarea
+            id="feedback-message"
+            rows="5"
+            minlength="10"
+            maxlength="2000"
+            placeholder="What should we keep, change, or fix?"
+            required
+          ></textarea>
+
+          <input
+            id="feedback-website"
+            name="website"
+            type="text"
+            tabindex="-1"
+            autocomplete="off"
+            class="honeypot-field"
+            aria-hidden="true"
+          />
+
+          <button id="feedback-submit" type="submit">Send Feedback</button>
+          <p id="feedback-form-message" class="student-message" role="status"></p>
+        </form>
+      </section>
+    </main>
+
+    <script src="feedback.js"></script>
+  </body>
+</html>

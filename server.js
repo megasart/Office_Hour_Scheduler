@@ -68,6 +68,17 @@ async function ensureDatabaseSchema() {
   `);
 
   await pool.query(`
+    ALTER TABLE app_users
+      DROP CONSTRAINT IF EXISTS app_users_role_check
+  `);
+
+  await pool.query(`
+    ALTER TABLE app_users
+      ADD CONSTRAINT app_users_role_check
+      CHECK (role IN ('teacher', 'student', 'admin'))
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS appointment_participants (
       id SERIAL PRIMARY KEY,
       appointment_id INTEGER NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
@@ -82,6 +93,43 @@ async function ensureDatabaseSchema() {
     CREATE INDEX IF NOT EXISTS appointments_management_token_idx
       ON appointments (management_token_hash)
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS feedback (
+      id SERIAL PRIMARY KEY,
+      teacher_id INTEGER REFERENCES app_users(id) ON DELETE SET NULL,
+      student_name TEXT,
+      student_email TEXT,
+      category TEXT NOT NULL DEFAULT 'General',
+      rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+      message TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'New'
+        CHECK (status IN ('New', 'Read', 'Archived')),
+      admin_note TEXT,
+      read_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS feedback_status_created_idx
+      ON feedback (status, created_at DESC)
+  `);
+
+  const adminUsername = (
+    process.env.ADMIN_USERNAME || "admin123"
+  ).trim().toLowerCase();
+  const adminPassword = process.env.ADMIN_PASSWORD || "123admin";
+  const adminPasswordHash = await bcrypt.hash(adminPassword, 12);
+  await pool.query(
+    `
+      INSERT INTO app_users
+        (username, password_hash, role, display_name, teacher_slug)
+      VALUES ($1, $2, 'admin', 'System Administrator', NULL)
+      ON CONFLICT (username) DO NOTHING
+    `,
+    [adminUsername, adminPasswordHash]
+  );
 }
 
 async function sendMeetingEmail({
@@ -429,6 +477,10 @@ app.get("/teacher/:slug", (request, response) => {
   response.sendFile(
     path.join(__dirname, "public", "teacher-profile.html")
   );
+});
+
+app.get("/admin", (request, response) => {
+  response.sendFile(path.join(__dirname, "public", "admin.html"));
 });
 
 app.get("/api/teachers/:slug", async (request, response) => {
@@ -933,6 +985,231 @@ function requireRole(role) {
     next();
   };
 }
+
+app.post(
+  "/api/feedback",
+  rateLimit(10, 15 * 60 * 1000),
+  async (request, response) => {
+    const body = request.body || {};
+    const studentName =
+      typeof body.studentName === "string"
+        ? body.studentName.trim().slice(0, 100)
+        : "";
+    const category = body.category;
+    const message =
+      typeof body.message === "string"
+        ? body.message.trim()
+        : "";
+    const rating = Number(body.rating);
+    const validCategories = [
+      "General",
+      "Booking experience",
+      "Teacher experience",
+      "Bug report"
+    ];
+
+    if (body.website) {
+      return response.status(400).json({
+        error: "The feedback could not be submitted."
+      });
+    }
+
+    if (
+      !validCategories.includes(category) ||
+      !Number.isInteger(rating) ||
+      rating < 1 ||
+      rating > 5 ||
+      message.length < 10 ||
+      message.length > 2000
+    ) {
+      return response.status(400).json({
+        error: "Please provide a category, rating, and feedback of at least 10 characters."
+      });
+    }
+
+    try {
+      await pool.query(
+        `
+          INSERT INTO feedback
+            (student_name, category, rating, message)
+          VALUES ($1, $2, $3, $4)
+        `,
+        [
+          studentName || null,
+          category,
+          rating,
+          message
+        ]
+      );
+
+      response.status(201).json({
+        message: "Thank you. Your feedback was submitted."
+      });
+    } catch (error) {
+      console.error("Could not save feedback:", error.message);
+      response.status(500).json({
+        error: "Your feedback could not be saved right now."
+      });
+    }
+  }
+);
+
+app.get(
+  "/api/admin/overview",
+  requireRole("admin"),
+  async (request, response) => {
+    try {
+      const [statsResult, recentResult, teacherResult] = await Promise.all([
+        pool.query(`
+          SELECT
+            (SELECT COUNT(*)::int FROM app_users WHERE role = 'teacher') AS teachers,
+            (SELECT COUNT(*)::int FROM app_users WHERE role = 'student') AS students,
+            (SELECT COUNT(*)::int FROM appointments) AS appointments,
+            (SELECT COUNT(*)::int FROM feedback WHERE status = 'New') AS new_feedback
+        `),
+        pool.query(`
+          SELECT
+            a.id,
+            a.student_name,
+            a.student_email,
+            a.status,
+            a.scheduled_date,
+            a.created_at,
+            oh.course_name,
+            oh.instructor_name
+          FROM appointments a
+          JOIN office_hours oh ON a.office_hour_id = oh.id
+          ORDER BY a.created_at DESC
+          LIMIT 8
+        `),
+        pool.query(`
+          SELECT
+            teachers.id,
+            teachers.display_name,
+            teachers.teacher_slug,
+            COUNT(DISTINCT office_hours.id)::int AS office_hour_count,
+            COUNT(DISTINCT appointments.id) FILTER
+              (WHERE appointments.status = 'Approved')::int AS approved_count
+          FROM app_users teachers
+          LEFT JOIN office_hours
+            ON office_hours.teacher_id = teachers.id
+          LEFT JOIN appointments
+            ON appointments.office_hour_id = office_hours.id
+          WHERE teachers.role = 'teacher'
+          GROUP BY teachers.id, teachers.display_name, teachers.teacher_slug
+          ORDER BY teachers.display_name
+        `)
+      ]);
+
+      response.json({
+        stats: statsResult.rows[0],
+        recentAppointments: recentResult.rows,
+        teachers: teacherResult.rows
+      });
+    } catch (error) {
+      console.error("Could not load admin overview:", error.message);
+      response.status(500).json({
+        error: "The admin overview could not be loaded."
+      });
+    }
+  }
+);
+
+app.get(
+  "/api/admin/feedback",
+  requireRole("admin"),
+  async (request, response) => {
+    const requestedStatus = request.query.status || "All";
+    const validStatuses = ["All", "New", "Read", "Archived"];
+    if (!validStatuses.includes(requestedStatus)) {
+      return response.status(400).json({
+        error: "Invalid feedback status."
+      });
+    }
+
+    const values = [];
+    let query = `
+      SELECT
+        feedback.id,
+        feedback.student_name,
+        feedback.category,
+        feedback.rating,
+        feedback.message,
+        feedback.status,
+        feedback.admin_note,
+        feedback.read_at,
+        feedback.created_at
+      FROM feedback
+    `;
+    if (requestedStatus !== "All") {
+      query += " WHERE feedback.status = $1";
+      values.push(requestedStatus);
+    }
+    query += " ORDER BY feedback.created_at DESC";
+
+    try {
+      const result = await pool.query(query, values);
+      response.json(result.rows);
+    } catch (error) {
+      console.error("Could not load admin feedback:", error.message);
+      response.status(500).json({
+        error: "Feedback could not be loaded."
+      });
+    }
+  }
+);
+
+app.patch(
+  "/api/admin/feedback/:id",
+  requireRole("admin"),
+  async (request, response) => {
+    const feedbackId = Number(request.params.id);
+    const status = request.body.status;
+    const adminNote =
+      typeof request.body.adminNote === "string"
+        ? request.body.adminNote.trim().slice(0, 1000)
+        : "";
+    if (
+      !Number.isInteger(feedbackId) ||
+      !["New", "Read", "Archived"].includes(status)
+    ) {
+      return response.status(400).json({
+        error: "Invalid feedback update."
+      });
+    }
+
+    try {
+      const result = await pool.query(
+        `
+          UPDATE feedback
+          SET status = $1,
+              admin_note = $2,
+              read_at = CASE
+                WHEN $1 = 'New' THEN NULL
+                ELSE COALESCE(read_at, NOW())
+              END
+          WHERE id = $3
+          RETURNING id, status, admin_note, read_at
+        `,
+        [status, adminNote || null, feedbackId]
+      );
+      if (result.rowCount === 0) {
+        return response.status(404).json({
+          error: "Feedback not found."
+        });
+      }
+      response.json({
+        message: "Feedback updated.",
+        feedback: result.rows[0]
+      });
+    } catch (error) {
+      console.error("Could not update admin feedback:", error.message);
+      response.status(500).json({
+        error: "Feedback could not be updated."
+      });
+    }
+  }
+);
 
 app.post("/api/login", async (request, response) => {
   const { username, password } = request.body;

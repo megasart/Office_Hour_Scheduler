@@ -25,6 +25,13 @@ async function createDemoUsers() {
       role: "student",
       displayName: "Demo Student",
       teacherSlug: null
+    },
+    {
+      username: (process.env.ADMIN_USERNAME || "admin123").toLowerCase(),
+      password: process.env.ADMIN_PASSWORD || "123admin",
+      role: "admin",
+      displayName: "System Administrator",
+      teacherSlug: null
     }
   ];
 
