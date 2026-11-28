@@ -30,7 +30,209 @@ const mailer = process.env.SMTP_HOST
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const DEFAULT_TIME_ZONE =
+  process.env.APP_TIME_ZONE || "America/Los_Angeles";
 const requestBuckets = new Map();
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[character]));
+}
+
+function escapeIcsText(value) {
+  return String(value ?? "")
+    .replace(/\\/g, "\\\\")
+    .replace(/\r?\n/g, "\\n")
+    .replace(/([,;])/g, "\\$1");
+}
+
+function foldIcsLine(line) {
+  const value = String(line);
+  const chunks = [];
+  let remaining = value;
+  while (remaining.length > 73) {
+    chunks.push(remaining.slice(0, 73));
+    remaining = remaining.slice(73);
+  }
+  chunks.push(remaining);
+  return chunks.join("\r\n ");
+}
+
+function compactCalendarTime(value) {
+  return String(value || "00:00")
+    .slice(0, 5)
+    .replace(":", "") + "00";
+}
+
+function extractManagementLink(text) {
+  const match = String(text || "").match(
+    /Manage your request:\s*(https?:\/\/[^\s]+)/i
+  );
+  return match ? match[1].replace(/[),.]+$/, "") : "";
+}
+
+function formatEmailTime(value) {
+  if (!value) {
+    return "";
+  }
+  const parts = String(value).slice(0, 5).split(":").map(Number);
+  const suffix = parts[0] >= 12 ? "PM" : "AM";
+  const hour = parts[0] % 12 || 12;
+  return hour + ":" + String(parts[1]).padStart(2, "0") + " " + suffix;
+}
+
+function buildCalendarInvite({ appointment, officeHour, text }) {
+  if (!appointment || !officeHour || !appointment.scheduled_date) {
+    return "";
+  }
+
+  const date = String(appointment.scheduled_date)
+    .slice(0, 10)
+    .replace(/-/g, "");
+  const timeZone = validTimeZone(officeHour.time_zone)
+    ? officeHour.time_zone
+    : DEFAULT_TIME_ZONE;
+  const managementLink = extractManagementLink(text);
+  const description = [
+    "This office-hour event was created by instoffice.",
+    officeHour.meeting_link
+      ? "Meeting link: " + officeHour.meeting_link
+      : "",
+    managementLink
+      ? "Manage request: " + managementLink
+      : ""
+  ].filter(Boolean).join("\n");
+  const location = [
+    officeHour.location,
+    officeHour.meeting_mode
+  ].filter(Boolean).join(" / ");
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//instoffice//Office Hour Scheduler//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:REQUEST",
+    "X-WR-CALNAME:instoffice",
+    "BEGIN:VEVENT",
+    "UID:appointment-" + appointment.id + "@instoffice",
+    "DTSTAMP:" + new Date()
+      .toISOString()
+      .replace(/[-:]/g, "")
+      .replace(/\.\d{3}Z$/, "Z"),
+    "DTSTART;TZID=" + timeZone + ":" + date + "T" +
+      compactCalendarTime(officeHour.start_time),
+    "DTEND;TZID=" + timeZone + ":" + date + "T" +
+      compactCalendarTime(officeHour.end_time),
+    "SUMMARY:" + escapeIcsText(
+      officeHour.course_name + " office hour with " +
+      officeHour.instructor_name
+    ),
+    "LOCATION:" + escapeIcsText(location),
+    "DESCRIPTION:" + escapeIcsText(description),
+    "STATUS:CONFIRMED",
+    "SEQUENCE:0",
+    "TRANSP:OPAQUE",
+    "END:VEVENT",
+    "END:VCALENDAR"
+  ];
+
+  return lines.map(foldIcsLine).join("\r\n") + "\r\n";
+}
+
+function buildMeetingEmailHtml({ subject, text, appointment, officeHour }) {
+  const lines = String(text || "").split(/\r?\n/);
+  const greeting = lines.find((line) => /^Hi\b/i.test(line.trim())) || "Hello,";
+  const source = officeHour || appointment || {};
+  const hasStructuredDetails = Boolean(
+    officeHour ||
+    (appointment && (appointment.course_name || appointment.scheduled_date))
+  );
+  const detailLine = /^(Course|Teacher|Date|Time|Location|Meeting link|Requested date|Requested time|Manage your request):/i;
+  const bodyText = lines
+    .filter((line) => {
+      const trimmed = line.trim();
+      return trimmed &&
+        trimmed !== greeting.trim() &&
+        (!hasStructuredDetails || !detailLine.test(trimmed));
+    })
+    .join("\n")
+    .trim() || "Your office-hour scheduling update is ready.";
+  const meetingLink = source.meeting_link || "";
+  const managementLink = extractManagementLink(text);
+  const details = [
+    ["Course", source.course_name],
+    ["Teacher", source.instructor_name],
+    [
+      "Date",
+      appointment && appointment.scheduled_date
+        ? formatDate(appointment.scheduled_date)
+        : ""
+    ],
+    [
+      "Time",
+      source.start_time && source.end_time
+        ? formatEmailTime(source.start_time) + " – " +
+          formatEmailTime(source.end_time)
+        : ""
+    ],
+    [
+      "Location",
+      [source.location, source.meeting_mode].filter(Boolean).join(" / ")
+    ],
+    ["Time zone", source.time_zone]
+  ].filter((detail) => detail[1]);
+  const detailRows = details.map(([label, value]) =>
+    "<tr>" +
+      "<td style=\"padding:8px 12px 8px 0;color:#6f6a89;font-size:13px;vertical-align:top;\">" +
+        escapeHtml(label) +
+      "</td>" +
+      "<td style=\"padding:8px 0;color:#24213d;font-size:14px;font-weight:600;vertical-align:top;\">" +
+        escapeHtml(value) +
+      "</td>" +
+    "</tr>"
+  ).join("");
+  const detailCard = detailRows
+    ? "<table role=\"presentation\" width=\"100%\" style=\"border-collapse:collapse;background:#f7f6fc;border:1px solid #ddd9ee;border-radius:12px;margin:24px 0;\">" +
+        "<tr><td colspan=\"2\" style=\"padding:14px 12px 6px;color:#5146a5;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;\">Meeting details</td></tr>" +
+        detailRows +
+      "</table>"
+    : "";
+  const meetingLinkHtml = /^https?:\/\//i.test(meetingLink)
+    ? "<p style=\"margin:20px 0 0;font-size:14px;\"><a href=\"" +
+      escapeHtml(meetingLink) +
+      "\" style=\"color:#5146a5;font-weight:700;\">Open meeting link</a></p>"
+    : "";
+  const actionButton = /^https?:\/\//i.test(managementLink)
+    ? "<p style=\"margin:24px 0 4px;\"><a href=\"" +
+      escapeHtml(managementLink) +
+      "\" style=\"display:inline-block;padding:12px 18px;border-radius:9px;background:#5146a5;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;\">Manage appointment</a></p>"
+    : "";
+
+  return "<!doctype html><html><body style=\"margin:0;padding:0;background:#f5f3fc;font-family:Arial,sans-serif;color:#24213d;\">" +
+    "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#f5f3fc;\"><tr><td align=\"center\" style=\"padding:32px 16px;\">" +
+      "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:640px;background:#ffffff;border:1px solid #ddd9ee;border-radius:16px;overflow:hidden;\">" +
+        "<tr><td style=\"padding:26px 32px;background:#40367d;color:#ffffff;\"><div style=\"font-size:24px;font-weight:800;letter-spacing:-.5px;\">instoffice</div><div style=\"margin-top:6px;color:#e9e6ff;font-size:13px;\">Office-hour scheduling made simple</div></td></tr>" +
+        "<tr><td style=\"padding:32px;\"><div style=\"color:#5146a5;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;\">Office-hour update</div>" +
+          "<h1 style=\"margin:10px 0 20px;color:#24213d;font-size:24px;line-height:1.25;\">" +
+            escapeHtml(subject) +
+          "</h1>" +
+          "<p style=\"margin:0 0 16px;font-size:15px;line-height:1.6;\">" +
+            escapeHtml(greeting) +
+          "</p>" +
+          "<div style=\"font-size:15px;line-height:1.65;\">" +
+            escapeHtml(bodyText).replace(/\r?\n/g, "<br>") +
+          "</div>" +
+          detailCard + meetingLinkHtml + actionButton +
+          "<p style=\"margin:28px 0 0;color:#7a7592;font-size:12px;line-height:1.5;\">This message was sent by instoffice.</p>" +
+        "</td></tr>" +
+      "</table>" +
+    "</td></tr></table></body></html>";
+}
 
 async function ensureDatabaseSchema() {
   await pool.query(`
@@ -150,49 +352,26 @@ async function sendMeetingEmail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to,
     subject,
-    text
+    text,
+    html: buildMeetingEmailHtml({
+      subject,
+      text,
+      appointment,
+      officeHour
+    })
   };
 
-  if (appointment && officeHour && appointment.scheduled_date) {
-    const date = String(appointment.scheduled_date)
-      .slice(0, 10)
-      .replace(/-/g, "");
-    const startTime = String(officeHour.start_time)
-      .slice(0, 5)
-      .replace(":", "");
-    const endTime = String(officeHour.end_time)
-      .slice(0, 5)
-      .replace(":", "");
-    const stamp = new Date()
-      .toISOString()
-      .replace(/[-:]/g, "")
-      .replace(/\.\d{3}Z$/, "Z");
-    const calendarInvite = [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//instoffice//EN",
-      "METHOD:PUBLISH",
-      "BEGIN:VEVENT",
-      "UID:appointment-" + appointment.id + "@office-hour-scheduler",
-      "DTSTAMP:" + stamp,
-      "DTSTART;TZID=" + (officeHour.time_zone || "America/Los_Angeles") + ":" + date + "T" + startTime + "00",
-      "DTEND;TZID=" + (officeHour.time_zone || "America/Los_Angeles") + ":" + date + "T" + endTime + "00",
-      "SUMMARY:" + officeHour.course_name + " office hour with " + officeHour.instructor_name,
-      "LOCATION:" + officeHour.location,
-      officeHour.meeting_link
-        ? "DESCRIPTION:Meeting link: " + officeHour.meeting_link
-        : "DESCRIPTION:Office-hour appointment",
-      "END:VEVENT",
-      "END:VCALENDAR"
-    ].join("\r\n");
-
-    message.attachments = [
-      {
-        filename: "office-hour.ics",
-        content: calendarInvite,
-        contentType: "text/calendar; charset=utf-8"
-      }
-    ];
+  const calendarInvite = buildCalendarInvite({
+    appointment,
+    officeHour,
+    text
+  });
+  if (calendarInvite) {
+    message.icalEvent = {
+      method: "REQUEST",
+      filename: "office-hour.ics",
+      content: calendarInvite
+    };
   }
 
   await mailer.sendMail(message);
@@ -218,8 +397,37 @@ function validDate(value) {
     date.toISOString().slice(0, 10) === value;
 }
 
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+function validTimeZone(value) {
+  if (typeof value !== "string" || value.trim() === "") {
+    return false;
+  }
+
+  try {
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: value
+    }).format();
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function todayIso(timeZone = DEFAULT_TIME_ZONE) {
+  const resolvedTimeZone = validTimeZone(timeZone)
+    ? timeZone
+    : DEFAULT_TIME_ZONE;
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: resolvedTimeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(
+    parts
+      .filter((part) => ["year", "month", "day"].includes(part.type))
+      .map((part) => [part.type, part.value])
+  );
+  return values.year + "-" + values.month + "-" + values.day;
 }
 
 function addDays(dateValue, days) {
@@ -288,7 +496,10 @@ function officeHourDate(officeHour) {
 }
 
 function validateScheduleDate(officeHour, scheduledDate) {
-  if (!validDate(scheduledDate) || scheduledDate < todayIso()) {
+  if (
+    !validDate(scheduledDate) ||
+    scheduledDate < todayIso(officeHour.time_zone)
+  ) {
     return "Please choose a current or future meeting date.";
   }
 
@@ -483,6 +694,35 @@ app.get("/admin", (request, response) => {
   response.sendFile(path.join(__dirname, "public", "admin.html"));
 });
 
+app.get("/api/teachers", async (request, response) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+        teachers.display_name,
+        teachers.teacher_slug,
+        COALESCE(
+          ARRAY_AGG(DISTINCT office_hours.course_name)
+            FILTER (WHERE office_hours.id IS NOT NULL),
+          '{}'
+        ) AS courses
+      FROM app_users teachers
+      LEFT JOIN office_hours
+        ON office_hours.teacher_id = teachers.id
+        AND office_hours.is_available = true
+      WHERE teachers.role = 'teacher'
+      GROUP BY teachers.id, teachers.display_name, teachers.teacher_slug
+      ORDER BY teachers.display_name, teachers.teacher_slug
+    `);
+
+    response.json(result.rows);
+  } catch (error) {
+    console.error("Could not load teachers:", error.message);
+    response.status(500).json({
+      error: "The teacher directory could not be loaded."
+    });
+  }
+});
+
 app.get("/api/teachers/:slug", async (request, response) => {
   const { slug } = request.params;
 
@@ -589,8 +829,17 @@ function readOfficeHourInput(body) {
     };
   }
 
+  if (!validTimeZone(timeZone)) {
+    return {
+      error: "Please select a valid time zone."
+    };
+  }
+
   if (scheduleType === "one-time") {
-    if (!validDate(specificDate) || specificDate < todayIso()) {
+    if (
+      !validDate(specificDate) ||
+      specificDate < todayIso(timeZone)
+    ) {
       return {
         error: "One-time office hours need a current or future date."
       };
@@ -985,6 +1234,90 @@ function requireRole(role) {
     next();
   };
 }
+
+app.post(
+  "/api/teacher-signup",
+  rateLimit(5, 60 * 60 * 1000),
+  async (request, response) => {
+    const body = request.body || {};
+    const displayName =
+      typeof body.displayName === "string"
+        ? body.displayName.trim().slice(0, 100)
+        : "";
+    const username =
+      typeof body.username === "string"
+        ? body.username.trim().toLowerCase()
+        : "";
+    const password =
+      typeof body.password === "string"
+        ? body.password
+        : "";
+    const confirmPassword =
+      typeof body.confirmPassword === "string"
+        ? body.confirmPassword
+        : "";
+    const validUsername = /^[a-z0-9][a-z0-9._-]{2,30}$/i.test(username);
+
+    if (
+      displayName.length < 2 ||
+      !validUsername ||
+      password.length < 8 ||
+      password.length > 128 ||
+      password !== confirmPassword
+    ) {
+      return response.status(400).json({
+        error:
+          "Enter a name, username, matching passwords, and a password of at least 8 characters."
+      });
+    }
+
+    try {
+      const existingResult = await pool.query(
+        `
+          SELECT username, teacher_slug
+          FROM app_users
+          WHERE username = $1
+             OR teacher_slug = $1
+          LIMIT 1
+        `,
+        [username]
+      );
+
+      if (existingResult.rowCount > 0) {
+        return response.status(409).json({
+          error: "That username or teacher code is already in use."
+        });
+      }
+
+      const passwordHash = await bcrypt.hash(password, 12);
+      const result = await pool.query(
+        `
+          INSERT INTO app_users
+            (username, password_hash, role, display_name, teacher_slug)
+          VALUES ($1, $2, 'teacher', $3, $1)
+          RETURNING id, username, display_name, teacher_slug
+        `,
+        [username, passwordHash, displayName]
+      );
+
+      response.status(201).json({
+        message: "Your teacher account was created. You can log in now.",
+        teacher: result.rows[0]
+      });
+    } catch (error) {
+      if (error.code === "23505") {
+        return response.status(409).json({
+          error: "That username or teacher code is already in use."
+        });
+      }
+
+      console.error("Teacher signup error:", error.message);
+      response.status(500).json({
+        error: "The teacher account could not be created right now."
+      });
+    }
+  }
+);
 
 app.post(
   "/api/feedback",
@@ -1425,14 +1758,15 @@ app.get(
 
       officeHourResult.rows.forEach((officeHour) => {
         const dates = [];
+        const officeHourToday = todayIso(officeHour.time_zone);
         if (officeHour.specific_date) {
           const date = officeHourDate(officeHour);
-          if (date >= todayIso()) {
+          if (date >= officeHourToday) {
             dates.push(date);
           }
         } else {
           for (let offset = 0; offset < 90; offset += 1) {
-            const date = addDays(todayIso(), offset);
+            const date = addDays(officeHourToday, offset);
             if (dayOfWeekForDate(date) === officeHour.day_of_week) {
               dates.push(date);
             }
@@ -2168,7 +2502,7 @@ app.get(
       "a.ai_summary, a.ai_topic, a.ai_suggested_questions, " +
       "oh.course_name, oh.instructor_name, oh.day_of_week, " +
       "oh.start_time, oh.end_time, oh.location, oh.meeting_mode, " +
-      "oh.meeting_link, requested.course_name AS requested_course_name, " +
+      "oh.time_zone, oh.meeting_link, requested.course_name AS requested_course_name, " +
       "requested.day_of_week AS requested_day_of_week, " +
       "requested.start_time AS requested_start_time, " +
       "requested.end_time AS requested_end_time, " +
@@ -2238,7 +2572,8 @@ app.get(
         office_hours.day_of_week,
         office_hours.start_time,
         office_hours.end_time,
-        office_hours.location
+        office_hours.location,
+        office_hours.time_zone
       FROM appointments
       JOIN office_hours
         ON appointments.office_hour_id = office_hours.id
@@ -2474,7 +2809,7 @@ app.post(
     try {
       await client.query("BEGIN");
       const currentResult = await client.query(
-        "SELECT a.*, oh.teacher_id, oh.capacity " +
+        "SELECT a.*, oh.teacher_id, oh.capacity, oh.time_zone " +
         "FROM appointments a JOIN office_hours oh " +
         "ON a.office_hour_id = oh.id " +
         "WHERE a.id = $1 AND oh.teacher_id = $2 FOR UPDATE",
@@ -2496,7 +2831,8 @@ app.post(
       }
       if (
         !current.scheduled_date ||
-        String(current.scheduled_date).slice(0, 10) < todayIso()
+        String(current.scheduled_date).slice(0, 10) <
+          todayIso(current.time_zone)
       ) {
         await client.query("ROLLBACK");
         return response.status(409).json({

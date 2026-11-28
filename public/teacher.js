@@ -96,6 +96,10 @@ function updateScheduleFields() {
   dateInput.hidden = !oneTime;
   dateInput.required = oneTime;
   dateLabel.hidden = !oneTime;
+  dateInput.min = instOfficeTime.todayInTimeZone(
+    document.getElementById("time-zone").value ||
+      instOfficeTime.defaultTimeZone
+  );
 }
 
 function resetOfficeHourForm() {
@@ -359,7 +363,9 @@ function createUpcomingMeetingCard(appointment) {
   const meetingDate = appointment.scheduled_date
     ? String(appointment.scheduled_date).slice(0, 10)
     : "";
-  const today = new Date().toISOString().slice(0, 10);
+  const today = instOfficeTime.todayInTimeZone(
+    appointment.time_zone || instOfficeTime.defaultTimeZone
+  );
   if (!meetingDate) {
     date.textContent = "Date not assigned";
     card.classList.add("is-undated");
@@ -412,12 +418,14 @@ function createUpcomingMeetingCard(appointment) {
 async function loadUpcomingMeetings() {
   const response = await fetch("/api/appointments?status=Approved");
   const appointments = await getResponseData(response);
-  const today = new Date().toISOString().slice(0, 10);
   const upcoming = appointments
-    .filter((appointment) =>
-      appointment.scheduled_date &&
-      String(appointment.scheduled_date).slice(0, 10) >= today
-    )
+    .filter((appointment) => {
+      const today = instOfficeTime.todayInTimeZone(
+        appointment.time_zone || instOfficeTime.defaultTimeZone
+      );
+      return appointment.scheduled_date &&
+        String(appointment.scheduled_date).slice(0, 10) >= today;
+    })
     .sort((first, second) => {
       const firstStart = String(first.scheduled_date).slice(0, 10) +
         "T" + first.start_time;
@@ -426,10 +434,13 @@ async function loadUpcomingMeetings() {
       return firstStart.localeCompare(secondStart);
     });
   const olderOrUndated = appointments
-    .filter((appointment) =>
-      !appointment.scheduled_date ||
-      String(appointment.scheduled_date).slice(0, 10) < today
-    )
+    .filter((appointment) => {
+      const today = instOfficeTime.todayInTimeZone(
+        appointment.time_zone || instOfficeTime.defaultTimeZone
+      );
+      return !appointment.scheduled_date ||
+        String(appointment.scheduled_date).slice(0, 10) < today;
+    })
     .sort((first, second) => {
       const firstDate = first.scheduled_date
         ? String(first.scheduled_date).slice(0, 10)
@@ -609,6 +620,10 @@ cancelMeetingForm.addEventListener("submit", async (event) => {
 });
 
 scheduleTypeInput.addEventListener("change", updateScheduleFields);
+document.getElementById("time-zone").addEventListener(
+  "change",
+  updateScheduleFields
+);
 
 openOfficeHourDialogButton.addEventListener("click", () => {
   resetOfficeHourForm();

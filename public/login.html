@@ -9,39 +9,107 @@
 
   <body>
     <main class="login-page">
-      <section class="login-card">
+      <section class="login-card login-card-wide">
+        <a class="button login-return-button" href="/">
+          ← Return Home
+        </a>
         <div class="login-brand">
           <img class="site-logo" src="/assets/instoffice-logo.png" alt="" />
           <span>instoffice</span>
         </div>
-        <h2>Teacher Login</h2>
 
-        <p>
-          Teachers can manage office hours. Students can request office hours
-          without an account from the booking page.
-        </p>
+        <div class="login-columns">
+          <section class="login-panel">
+            <p class="dashboard-label">Staff access</p>
+            <h2>Teacher Login</h2>
+            <p>
+              Log in to manage your office hours and respond to appointment
+              requests.
+            </p>
 
-        <form id="login-form">
-          <label for="username">Username</label>
-          <input
-            id="username"
-            type="text"
-            autocomplete="username"
-            required
-          />
+            <form id="login-form" novalidate>
+              <label for="username">Username</label>
+              <input
+                id="username"
+                type="text"
+                autocomplete="username"
+                required
+              />
 
-          <label for="password">Password</label>
-          <input
-            id="password"
-            type="password"
-            autocomplete="current-password"
-            required
-          />
+              <label for="password">Password</label>
+              <input
+                id="password"
+                type="password"
+                autocomplete="current-password"
+                required
+              />
 
-          <button type="submit">Log In</button>
-        </form>
+              <button type="submit">Log In</button>
+            </form>
 
-        <p id="login-message"></p>
+            <p id="login-message" class="form-message" role="alert"></p>
+          </section>
+
+          <div class="login-divider" aria-hidden="true"></div>
+
+          <section class="login-panel">
+            <p class="dashboard-label">New teacher</p>
+            <h2>Create an Account</h2>
+            <p>
+              Sign up to create a public teacher profile and share your office
+              hours with students.
+            </p>
+
+            <form id="teacher-signup-form" novalidate>
+              <label for="teacher-display-name">Name</label>
+              <input
+                id="teacher-display-name"
+                type="text"
+                autocomplete="name"
+                maxlength="100"
+                placeholder="Example: Taylor Morgan"
+                required
+              />
+
+              <label for="teacher-username">Username</label>
+              <input
+                id="teacher-username"
+                type="text"
+                autocomplete="username"
+                maxlength="31"
+                placeholder="Example: taylor"
+                required
+              />
+              <p class="form-help">
+                This becomes your teacher code and public profile link.
+              </p>
+
+              <label for="teacher-password">Password</label>
+              <input
+                id="teacher-password"
+                type="password"
+                autocomplete="new-password"
+                minlength="8"
+                required
+              />
+
+              <label for="teacher-password-confirm">Confirm Password</label>
+              <input
+                id="teacher-password-confirm"
+                type="password"
+                autocomplete="new-password"
+                minlength="8"
+                required
+              />
+
+              <button id="signup-submit" type="submit">
+                Create Teacher Account
+              </button>
+            </form>
+
+            <p id="signup-message" class="form-message" role="alert"></p>
+          </section>
+        </div>
       </section>
     </main>
 

@@ -7,8 +7,7 @@ const profileOfficeHours = document.getElementById("profile-office-hours");
 
 let teacherSlug = "";
 let availableOfficeHours = [];
-let calendarMonth = new Date();
-calendarMonth.setDate(1);
+let calendarMonth = calendarMonthForTimeZone(instOfficeTime.defaultTimeZone);
 
 function formatTime(timeValue) {
   if (!timeValue) {
@@ -34,6 +33,22 @@ function formatDate(dateValue) {
       year: "numeric",
       timeZone: "UTC"
     });
+}
+
+function calendarMonthForTimeZone(timeZone) {
+  const today = instOfficeTime.todayInTimeZone(timeZone);
+  const month = new Date(today + "T12:00:00Z");
+  month.setUTCDate(1);
+  return month;
+}
+
+function officeHourTimeZone() {
+  const firstOfficeHour = availableOfficeHours.find(
+    (officeHour) => officeHour.time_zone
+  );
+  return firstOfficeHour
+    ? firstOfficeHour.time_zone
+    : instOfficeTime.defaultTimeZone;
 }
 
 async function getResponseData(response) {
@@ -118,8 +133,7 @@ function renderAvailabilityCalendar() {
   todayButton.className = "small-button calendar-today-button";
   todayButton.textContent = "Today";
   todayButton.addEventListener("click", () => {
-    calendarMonth = new Date();
-    calendarMonth.setDate(1);
+    calendarMonth = calendarMonthForTimeZone(officeHourTimeZone());
     renderAvailabilityCalendar();
   });
   toolbar.append(previousButton, monthLabel, nextButton, todayButton);
@@ -138,7 +152,13 @@ function renderAvailabilityCalendar() {
   const month = calendarMonth.getMonth();
   const firstDay = new Date(Date.UTC(year, month, 1)).getUTCDay();
   const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-  const today = new Date().toISOString().slice(0, 10);
+  const todayByTimeZone = new Set(
+    availableOfficeHours.map((officeHour) =>
+      instOfficeTime.todayInTimeZone(
+        officeHour.time_zone || instOfficeTime.defaultTimeZone
+      )
+    )
+  );
 
   for (let cell = 0; cell < 42; cell += 1) {
     const dateNumber = cell - firstDay + 1;
@@ -154,7 +174,7 @@ function renderAvailabilityCalendar() {
     const date = year + "-" +
       String(month + 1).padStart(2, "0") + "-" +
       String(dateNumber).padStart(2, "0");
-    if (date === today) {
+    if (todayByTimeZone.has(date)) {
       cellElement.classList.add("is-today");
     }
 
@@ -210,6 +230,7 @@ async function loadTeacherProfile() {
       encodeURIComponent(teacherSlug)
   );
   availableOfficeHours = await getResponseData(availabilityResponse);
+  calendarMonth = calendarMonthForTimeZone(officeHourTimeZone());
   renderAvailabilityCalendar();
   if (availableOfficeHours.length === 0) {
     profileMessage.textContent =

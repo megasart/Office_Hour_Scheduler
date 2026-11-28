@@ -2,6 +2,9 @@ const teacherFinder = document.getElementById("teacher-finder");
 const teacherFinderForm = document.getElementById("teacher-finder-form");
 const teacherLookupInput = document.getElementById("teacher-lookup");
 const teacherFinderMessage = document.getElementById("teacher-finder-message");
+const teacherDirectoryList = document.getElementById("teacher-directory-list");
+const teacherDirectoryMessage = document.getElementById("teacher-directory-message");
+const refreshTeachersButton = document.getElementById("refresh-teachers");
 const teacherResults = document.getElementById("teacher-results");
 const selectedTeacherName = document.getElementById("selected-teacher-name");
 const selectedTeacherInfo = document.getElementById("selected-teacher-info");
@@ -39,8 +42,7 @@ const submitButton = appointmentForm.querySelector('button[type="submit"]');
 
 let availableOfficeHours = [];
 let selectedTeacherSlug = "";
-let calendarMonth = new Date();
-calendarMonth.setDate(1);
+let calendarMonth = calendarMonthForTimeZone(instOfficeTime.defaultTimeZone);
 
 function formatTime(timeValue) {
   if (!timeValue) {
@@ -105,6 +107,68 @@ function extractTeacherSlug(value) {
     return "";
   }
   return decodeURIComponent(slug).toLowerCase();
+}
+
+function calendarMonthForTimeZone(timeZone) {
+  const today = instOfficeTime.todayInTimeZone(timeZone);
+  const month = new Date(today + "T12:00:00Z");
+  month.setUTCDate(1);
+  return month;
+}
+
+function officeHourTimeZone(officeHours) {
+  const firstOfficeHour = officeHours.find((officeHour) => officeHour.time_zone);
+  return firstOfficeHour
+    ? firstOfficeHour.time_zone
+    : instOfficeTime.defaultTimeZone;
+}
+
+function renderTeacherDirectory(teachers) {
+  teacherDirectoryList.replaceChildren();
+  if (teachers.length === 0) {
+    teacherDirectoryMessage.textContent =
+      "No teacher profiles are available yet.";
+    return;
+  }
+
+  teacherDirectoryMessage.textContent =
+    "Select a teacher to view their calendar.";
+  teachers.forEach((teacher) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "teacher-directory-card";
+
+    const details = document.createElement("span");
+    details.className = "teacher-directory-details";
+    const name = document.createElement("strong");
+    name.className = "teacher-directory-name";
+    name.textContent = teacher.display_name;
+    const code = document.createElement("span");
+    code.className = "teacher-directory-code";
+    code.textContent = "Teacher code: " + teacher.teacher_slug;
+    details.append(name, code);
+
+    const courses = document.createElement("span");
+    courses.className = "teacher-directory-courses";
+    courses.textContent = Array.isArray(teacher.courses) && teacher.courses.length > 0
+      ? teacher.courses.join(" · ")
+      : "No active office hours yet";
+
+    button.append(details, courses);
+    button.addEventListener("click", () => {
+      teacherLookupInput.value = teacher.teacher_slug;
+      findTeacher(teacher.teacher_slug).catch((error) => {
+        teacherFinderMessage.textContent = error.message;
+      });
+    });
+    teacherDirectoryList.appendChild(button);
+  });
+}
+
+async function loadTeacherDirectory() {
+  const response = await fetch("/api/teachers");
+  const teachers = await getResponseData(response);
+  renderTeacherDirectory(teachers);
 }
 
 function renderTeacherDetails(profile) {
@@ -256,8 +320,7 @@ function renderAvailabilityCalendar(officeHours) {
   todayButton.className = "small-button calendar-today-button";
   todayButton.textContent = "Today";
   todayButton.addEventListener("click", () => {
-    calendarMonth = new Date();
-    calendarMonth.setDate(1);
+    calendarMonth = calendarMonthForTimeZone(officeHourTimeZone(officeHours));
     renderAvailabilityCalendar(officeHours);
   });
   toolbar.append(previousButton, monthLabel, nextButton, todayButton);
@@ -276,7 +339,13 @@ function renderAvailabilityCalendar(officeHours) {
   const month = calendarMonth.getMonth();
   const firstDay = new Date(Date.UTC(year, month, 1)).getUTCDay();
   const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-  const today = new Date().toISOString().slice(0, 10);
+  const todayByTimeZone = new Set(
+    officeHours.map((officeHour) =>
+      instOfficeTime.todayInTimeZone(
+        officeHour.time_zone || instOfficeTime.defaultTimeZone
+      )
+    )
+  );
 
   for (let cell = 0; cell < 42; cell += 1) {
     const dateNumber = cell - firstDay + 1;
@@ -292,7 +361,7 @@ function renderAvailabilityCalendar(officeHours) {
     const date = year + "-" +
       String(month + 1).padStart(2, "0") + "-" +
       String(dateNumber).padStart(2, "0");
-    if (date === today) {
+    if (todayByTimeZone.has(date)) {
       cellElement.classList.add("is-today");
     }
 
@@ -386,11 +455,15 @@ async function findTeacher(value, officeHourId, scheduledDate) {
       calendarMonth = new Date(scheduledDate + "T12:00:00Z");
       calendarMonth.setDate(1);
     } else {
-      calendarMonth = new Date();
-      calendarMonth.setDate(1);
+      calendarMonth = calendarMonthForTimeZone(instOfficeTime.defaultTimeZone);
     }
 
     await loadAvailableOfficeHours(selectedTeacherSlug);
+    if (!scheduledDate) {
+      calendarMonth = calendarMonthForTimeZone(
+        officeHourTimeZone(availableOfficeHours)
+      );
+    }
     teacherFinder.hidden = true;
     teacherResults.hidden = false;
     teacherFinderMessage.textContent = "";
@@ -535,6 +608,17 @@ changeTeacherButton.addEventListener("click", () => {
   availabilityCalendar.replaceChildren();
   bookingStatusMessage.textContent = "";
   teacherLookupInput.focus();
+});
+
+refreshTeachersButton.addEventListener("click", () => {
+  teacherDirectoryMessage.textContent = "Refreshing teacher profiles...";
+  loadTeacherDirectory().catch((error) => {
+    teacherDirectoryMessage.textContent = error.message;
+  });
+});
+
+loadTeacherDirectory().catch((error) => {
+  teacherDirectoryMessage.textContent = error.message;
 });
 
 const pageParams = new URLSearchParams(window.location.search);
